@@ -2,9 +2,13 @@ package main
 
 import (
 	"expire-share/internal/config"
-	pkgLog "expire-share/internal/pkg/log"
+	pkgLog "expire-share/internal/lib/log"
+	"expire-share/internal/lib/log/sl"
+	"expire-share/internal/storage/mysql"
+	"fmt"
 	"log"
 	"log/slog"
+	"os"
 )
 
 func main() {
@@ -16,4 +20,12 @@ func main() {
 	}
 
 	lg.Info("starting expire share server", slog.String("environment", cfg.Environment))
+
+	storage, err := mysql.New(cfg.ConnectionString)
+	if err != nil {
+		lg.Error("failed to initialize storage:", sl.Error(err))
+		os.Exit(1)
+	}
+
+	fmt.Println(storage)
 }
