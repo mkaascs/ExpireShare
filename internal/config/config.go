@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
+	"log"
 	"os"
 	"time"
 )
@@ -37,7 +38,7 @@ type Service struct {
 func MustLoad() *Config {
 	cfg, err := Load()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	return cfg
