@@ -1,0 +1,14 @@
+environment: "local" # prod, local, dev
+connection_string: "root:makas1506@tcp(127.0.0.1:3306)/ExpireShare?charset=utf8&parseTime=True"
+storage:
+  type: "local"
+  path: "./files/"
+  max_file_size: "100mb"
+http_server:
+  address: "localhost:6010"
+  timeout: 4s
+  idle_timeout: 60s
+service:
+  default_ttl: 1h
+  default_max_downloads: 1
+  alias_length: 6
