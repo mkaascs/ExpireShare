@@ -5,7 +5,6 @@ import (
 	pkgLog "expire-share/internal/lib/log"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/storage/mysql"
-	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -27,5 +26,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println(storage)
+	defer func() {
+		err := storage.Database.Close()
+		if err != nil {
+			lg.Error("failed to close storage:", sl.Error(err))
+		}
+	}()
 }
