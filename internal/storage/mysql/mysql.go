@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"expire-share/internal/storage"
+	"expire-share/internal/storage/models"
 	"fmt"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
@@ -60,10 +61,10 @@ func (s *Storage) UploadFile(command UploadFileCommand) (_ int64, err error) {
 	return id, nil
 }
 
-func (s *Storage) GetFile(alias string) (File, error) {
+func (s *Storage) GetFile(alias string) (models.File, error) {
 	const fn = "storage.mysql.GetFile"
 
-	var file File
+	var file models.File
 	err := s.Database.QueryRow(`SELECT file_path, alias, downloads_left, loaded_at, expires_at FROM files WHERE alias = ?`, alias).Scan(
 		&file.FilePath,
 		&file.Alias,
@@ -73,10 +74,10 @@ func (s *Storage) GetFile(alias string) (File, error) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return File{}, storage.ErrAliasNotFound
+			return models.File{}, storage.ErrAliasNotFound
 		}
 
-		return File{}, fmt.Errorf("%s: %w", fn, err)
+		return models.File{}, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	return file, nil
