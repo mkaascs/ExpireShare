@@ -40,7 +40,7 @@ func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config
 			log.Info("failed to parse form", sl.Error(err))
 			response.RenderError(w, r,
 				http.StatusBadRequest,
-				"failed to parse form")
+				"failed to parse multipart/form")
 			return
 		}
 

@@ -16,23 +16,22 @@ func ToBytes(value string) (int64, error) {
 
 	lastNumberIndex := 0
 	for i, symbol := range value {
+		lastNumberIndex = i
 		if !unicode.IsDigit(symbol) {
 			break
 		}
-
-		lastNumberIndex = i
 	}
 
 	if lastNumberIndex == 0 {
 		return 0, fmt.Errorf("invalid size: %s", value)
 	}
 
-	number, err := strconv.Atoi(value[:lastNumberIndex+1])
+	number, err := strconv.Atoi(value[:lastNumberIndex])
 	if err != nil {
 		return 0, fmt.Errorf("failed to convert to int: %s", value)
 	}
 
-	unitIdx := slices.Index(unitSizes, value[lastNumberIndex+1:])
+	unitIdx := slices.Index(unitSizes, value[lastNumberIndex:])
 	if unitIdx == -1 {
 		return 0, fmt.Errorf("invalid size: %s", value)
 	}
@@ -45,8 +44,8 @@ func ToFormattedString(value int64) string {
 		return "0b"
 	}
 
-	unitIdx := int(math.Sqrt(float64(value))) / 10
-	number := value / int64(math.Pow(2, float64(10*unitIdx)))
+	unitIdx := int(math.Log2(float64(value))) / 10
+	number := float64(value) / math.Pow(2, float64(10*unitIdx))
 
-	return fmt.Sprintf("%d%s", number, unitSizes[unitIdx])
+	return fmt.Sprintf("%.2f%s", number, unitSizes[unitIdx])
 }
