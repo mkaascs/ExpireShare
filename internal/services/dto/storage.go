@@ -1,8 +1,8 @@
-package mysql
+package dto
 
 import "time"
 
-type UploadFileCommand struct {
+type AddFileCommand struct {
 	FilePath     string
 	Alias        string
 	MaxDownloads int16

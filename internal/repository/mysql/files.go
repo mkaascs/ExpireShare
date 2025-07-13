@@ -3,8 +3,9 @@ package mysql
 import (
 	"database/sql"
 	"errors"
-	"expire-share/internal/storage"
-	"expire-share/internal/storage/models"
+	"expire-share/internal/domain"
+	"expire-share/internal/repository"
+	"expire-share/internal/services/dto"
 	"fmt"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
@@ -15,14 +16,14 @@ const (
 	duplicateEntryErrCode = 1062
 )
 
-type Storage struct {
+type FileRepo struct {
 	Database *sql.DB
 }
 
-func (s *Storage) UploadFile(command UploadFileCommand) (_ int64, err error) {
-	const fn = "storage.mysql.UploadFile"
+func (r *FileRepo) AddFile(command dto.AddFileCommand) (_ int64, err error) {
+	const fn = "storage.mysql.AddFile"
 
-	stmt, err := s.Database.Prepare(`INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at) VALUES(?, ?, ?, ?, ?)`)
+	stmt, err := r.Database.Prepare(`INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at) VALUES(?, ?, ?, ?, ?)`)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", fn, err)
 	}
@@ -47,7 +48,7 @@ func (s *Storage) UploadFile(command UploadFileCommand) (_ int64, err error) {
 	if err != nil {
 		var mysqlErr *mysql.MySQLError
 		if errors.As(err, &mysqlErr) && mysqlErr.Number == duplicateEntryErrCode {
-			return 0, fmt.Errorf("%s: %w", fn, storage.ErrAliasExists)
+			return 0, fmt.Errorf("%s: %w", fn, repository.ErrAliasExists)
 		}
 
 		return 0, fmt.Errorf("%s: %w", fn, err)
@@ -61,11 +62,11 @@ func (s *Storage) UploadFile(command UploadFileCommand) (_ int64, err error) {
 	return id, nil
 }
 
-func (s *Storage) GetFile(alias string) (models.File, error) {
-	const fn = "storage.mysql.GetFile"
+func (r *FileRepo) GetFileByAlias(alias string) (domain.File, error) {
+	const fn = "storage.mysql.GetFileByAlias"
 
-	var file models.File
-	err := s.Database.QueryRow(`SELECT file_path, alias, downloads_left, loaded_at, expires_at FROM files WHERE alias = ?`, alias).Scan(
+	var file domain.File
+	err := r.Database.QueryRow(`SELECT file_path, alias, downloads_left, loaded_at, expires_at FROM files WHERE alias = ?`, alias).Scan(
 		&file.FilePath,
 		&file.Alias,
 		&file.DownloadsLeft,
@@ -74,19 +75,19 @@ func (s *Storage) GetFile(alias string) (models.File, error) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.File{}, storage.ErrAliasNotFound
+			return domain.File{}, repository.ErrAliasNotFound
 		}
 
-		return models.File{}, fmt.Errorf("%s: %w", fn, err)
+		return domain.File{}, fmt.Errorf("%s: %w", fn, err)
 	}
 
 	return file, nil
 }
 
-func (s *Storage) DeleteFile(alias string) (err error) {
+func (r *FileRepo) DeleteFile(alias string) (err error) {
 	const fn = "storage.mysql.DeleteFile"
 
-	stmt, err := s.Database.Prepare("DELETE FROM files WHERE alias = ?")
+	stmt, err := r.Database.Prepare("DELETE FROM files WHERE alias = ?")
 	if err != nil {
 		return fmt.Errorf("%s: %w", fn, err)
 	}
@@ -111,13 +112,13 @@ func (s *Storage) DeleteFile(alias string) (err error) {
 	}
 
 	if rowsAffected == 0 {
-		return storage.ErrAliasNotFound
+		return repository.ErrAliasNotFound
 	}
 
 	return nil
 }
 
-func New(connectionString string) (*Storage, error) {
+func NewFileRepo(connectionString string) (*FileRepo, error) {
 	const fn = "storage.mysql.New"
 
 	db, err := sql.Open("mysql", connectionString)
@@ -129,5 +130,5 @@ func New(connectionString string) (*Storage, error) {
 		return nil, fmt.Errorf("%s: failed to ping database: %v", fn, err)
 	}
 
-	return &Storage{Database: db}, nil
+	return &FileRepo{Database: db}, nil
 }

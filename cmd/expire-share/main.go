@@ -3,10 +3,10 @@ package main
 import (
 	"errors"
 	"expire-share/internal/config"
+	myMiddleware "expire-share/internal/delivery/middlewares"
 	pkgLog "expire-share/internal/lib/log"
 	"expire-share/internal/lib/log/sl"
-	myMiddleware "expire-share/internal/middlewares"
-	"expire-share/internal/storage/mysql"
+	"expire-share/internal/repository/mysql"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"log"
@@ -25,14 +25,14 @@ func main() {
 
 	lg.Info("starting expire share", slog.String("environment", cfg.Environment))
 
-	storage, err := mysql.New(cfg.ConnectionString)
+	repo, err := mysql.NewFileRepo(cfg.ConnectionString)
 	if err != nil {
 		lg.Error("failed to initialize storage:", sl.Error(err))
 		os.Exit(1)
 	}
 
 	defer func() {
-		err := storage.Database.Close()
+		err := repo.Database.Close()
 		if err != nil {
 			lg.Error("failed to close storage:", sl.Error(err))
 		}
