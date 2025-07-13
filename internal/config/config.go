@@ -1,6 +1,7 @@
 package config
 
 import (
+	"expire-share/internal/lib/size"
 	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
@@ -18,9 +19,10 @@ type Config struct {
 }
 
 type Storage struct {
-	Type        string `yaml:"type" default:"local"`
-	Path        string `yaml:"path" required:"true"`
-	MaxFileSize string `yaml:"max_file_size" default:"100mb"`
+	Type               string `yaml:"type" default:"local"`
+	Path               string `yaml:"path" required:"true"`
+	MaxFileSize        string `yaml:"max_file_size" default:"100mb"`
+	MaxFileSizeInBytes int64
 }
 
 type HttpServer struct {
@@ -31,8 +33,8 @@ type HttpServer struct {
 
 type Service struct {
 	DefaultTtl   time.Duration `yaml:"default_ttl" default:"1h"`
-	MaxDownloads int           `yaml:"default_max_downloads" default:"1"`
-	AliasLength  int           `yaml:"alias_length" default:"6"`
+	MaxDownloads int16         `yaml:"default_max_downloads" default:"1"`
+	AliasLength  int16         `yaml:"alias_length" default:"6"`
 }
 
 func MustLoad() *Config {
@@ -63,5 +65,11 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
 
+	bytes, err := size.ToBytes(cfg.MaxFileSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse max file size in config: %w", err)
+	}
+
+	cfg.MaxFileSizeInBytes = bytes
 	return &cfg, nil
 }

@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"expire-share/internal/domain"
@@ -20,10 +21,10 @@ type FileRepo struct {
 	Database *sql.DB
 }
 
-func (r *FileRepo) AddFile(command dto.AddFileCommand) (_ int64, err error) {
+func (r *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ int64, err error) {
 	const fn = "storage.mysql.AddFile"
 
-	stmt, err := r.Database.Prepare(`INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at) VALUES(?, ?, ?, ?, ?)`)
+	stmt, err := r.Database.PrepareContext(ctx, `INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at) VALUES(?, ?, ?, ?, ?)`)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", fn, err)
 	}
@@ -38,7 +39,7 @@ func (r *FileRepo) AddFile(command dto.AddFileCommand) (_ int64, err error) {
 	}(stmt)
 
 	currentTime := time.Now()
-	res, err := stmt.Exec(
+	res, err := stmt.ExecContext(ctx,
 		command.FilePath,
 		command.Alias,
 		command.MaxDownloads,
@@ -62,11 +63,11 @@ func (r *FileRepo) AddFile(command dto.AddFileCommand) (_ int64, err error) {
 	return id, nil
 }
 
-func (r *FileRepo) GetFileByAlias(alias string) (domain.File, error) {
+func (r *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.File, error) {
 	const fn = "storage.mysql.GetFileByAlias"
 
 	var file domain.File
-	err := r.Database.QueryRow(`SELECT file_path, alias, downloads_left, loaded_at, expires_at FROM files WHERE alias = ?`, alias).Scan(
+	err := r.Database.QueryRowContext(ctx, `SELECT file_path, alias, downloads_left, loaded_at, expires_at FROM files WHERE alias = ?`, alias).Scan(
 		&file.FilePath,
 		&file.Alias,
 		&file.DownloadsLeft,
@@ -84,10 +85,10 @@ func (r *FileRepo) GetFileByAlias(alias string) (domain.File, error) {
 	return file, nil
 }
 
-func (r *FileRepo) DeleteFile(alias string) (err error) {
+func (r *FileRepo) DeleteFile(ctx context.Context, alias string) (err error) {
 	const fn = "storage.mysql.DeleteFile"
 
-	stmt, err := r.Database.Prepare("DELETE FROM files WHERE alias = ?")
+	stmt, err := r.Database.PrepareContext(ctx, "DELETE FROM files WHERE alias = ?")
 	if err != nil {
 		return fmt.Errorf("%s: %w", fn, err)
 	}
@@ -101,7 +102,7 @@ func (r *FileRepo) DeleteFile(alias string) (err error) {
 		err = stmt.Close()
 	}(stmt)
 
-	res, err := stmt.Exec(alias)
+	res, err := stmt.ExecContext(ctx, alias)
 	if err != nil {
 		return fmt.Errorf("%s: %w", fn, err)
 	}
