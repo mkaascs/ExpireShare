@@ -22,23 +22,17 @@ var (
 
 type FileService struct {
 	repo interfaces.FileRepo
-	log  *slog.Logger
 	cfg  config.Config
+	log  *slog.Logger
 }
 
 func (fs *FileService) UploadFile(ctx context.Context, command dto.UploadFileCommand) (_ string, err error) {
 	const fn = "services.FileService.UploadFile"
 	fs.log = fs.log.With(slog.String("fn", fn))
 
-	info, err := command.File.Stat()
-	if err != nil {
-		fs.log.Error("failed to get file info", sl.Error(err))
-		return "", fmt.Errorf("%s: failed to get file info: %w", fn, err)
-	}
-
-	if fileSize := info.Size(); fileSize > fs.cfg.MaxFileSizeInBytes {
+	if command.FileSize > fs.cfg.MaxFileSizeInBytes {
 		fs.log.Info("file size too big",
-			slog.String("file_size", sizes.ToFormattedString(fileSize)),
+			slog.String("file_size", sizes.ToFormattedString(command.FileSize)),
 			slog.String("max_file_size", fs.cfg.MaxFileSize))
 		return "", fmt.Errorf("%s: %w - max file size %s", fn, ErrFileSizeTooBig, fs.cfg.MaxFileSize)
 	}
@@ -46,14 +40,14 @@ func (fs *FileService) UploadFile(ctx context.Context, command dto.UploadFileCom
 	newAlias := alias.Gen(fs.cfg.AliasLength)
 
 	fileDir := filepath.Join(fs.cfg.Path, newAlias)
-	if err := os.MkdirAll(fileDir, os.ModeDir); err != nil {
+	if err := os.MkdirAll(fileDir, 0755); err != nil {
 		fs.log.Error("failed to create file dir", sl.Error(err))
 		return "", fmt.Errorf("%s: failed to create file dir: %w", fn, err)
 	}
 
-	absFilePath := filepath.Join(fileDir, command.Filename)
+	filePath := filepath.Join(fileDir, command.Filename)
 
-	uploadedFile, err := os.Create(absFilePath)
+	uploadedFile, err := os.Create(filePath)
 	if err != nil {
 		fs.log.Error("failed to create file", sl.Error(err))
 		return "", fmt.Errorf("%s: failed to create file: %w", fn, err)

@@ -23,7 +23,7 @@ func ToBytes(value string) (int64, error) {
 		lastNumberIndex = i
 	}
 
-	if lastNumberIndex != 0 {
+	if lastNumberIndex == 0 {
 		return 0, fmt.Errorf("invalid size: %s", value)
 	}
 

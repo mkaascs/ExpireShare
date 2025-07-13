@@ -1,7 +1,7 @@
 package config
 
 import (
-	"expire-share/internal/lib/size"
+	"expire-share/internal/lib/sizes"
 	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
@@ -65,7 +65,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
 
-	bytes, err := size.ToBytes(cfg.MaxFileSize)
+	bytes, err := sizes.ToBytes(cfg.MaxFileSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse max file size in config: %w", err)
 	}

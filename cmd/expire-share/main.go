@@ -3,10 +3,12 @@ package main
 import (
 	"errors"
 	"expire-share/internal/config"
+	"expire-share/internal/delivery/http/upload"
 	myMiddleware "expire-share/internal/delivery/middlewares"
 	pkgLog "expire-share/internal/lib/log"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/repository/mysql"
+	"expire-share/internal/services"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"log"
@@ -47,6 +49,9 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 	router.Use(myMiddleware.NewLogger(lg))
+
+	fileService := services.NewFileService(repo, lg, *cfg)
+	router.Post("/upload", upload.New(fileService, lg, *cfg))
 
 	lg.Info("starting expire share server", slog.String("address", cfg.HttpServer.Address))
 

@@ -1,12 +1,13 @@
 package dto
 
 import (
-	"os"
+	"mime/multipart"
 	"time"
 )
 
 type UploadFileCommand struct {
-	File         *os.File
+	File         multipart.File
+	FileSize     int64
 	Filename     string
 	MaxDownloads int16
 	TTL          time.Duration
