@@ -9,6 +9,7 @@ import (
 
 var (
 	ErrFileSizeTooBig = errors.New("file size too big")
+	ErrAliasNotFound  = errors.New("file with current alias does not exist")
 )
 
 type FileService struct {

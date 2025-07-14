@@ -21,10 +21,10 @@ type FileRepo struct {
 	Database *sql.DB
 }
 
-func (r *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ int64, err error) {
+func (fr *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ int64, err error) {
 	const fn = "storage.mysql.AddFile"
 
-	stmt, err := r.Database.PrepareContext(ctx, `INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at) VALUES(?, ?, ?, ?, ?)`)
+	stmt, err := fr.Database.PrepareContext(ctx, `INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at) VALUES(?, ?, ?, ?, ?)`)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", fn, err)
 	}
@@ -63,11 +63,11 @@ func (r *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ i
 	return id, nil
 }
 
-func (r *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.File, error) {
+func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.File, error) {
 	const fn = "storage.mysql.GetFileByAlias"
 
 	var file domain.File
-	err := r.Database.QueryRowContext(ctx, `SELECT file_path, alias, downloads_left, loaded_at, expires_at FROM files WHERE alias = ?`, alias).Scan(
+	err := fr.Database.QueryRowContext(ctx, `SELECT file_path, alias, downloads_left, loaded_at, expires_at FROM files WHERE alias = ?`, alias).Scan(
 		&file.FilePath,
 		&file.Alias,
 		&file.DownloadsLeft,
@@ -85,10 +85,41 @@ func (r *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.Fil
 	return file, nil
 }
 
-func (r *FileRepo) DeleteFile(ctx context.Context, alias string) (err error) {
+func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string) (int16, error) {
+	const fn = "storage.mysql.DecrementDownloadsByAlias"
+
+	var downloadsLeft int16
+	err := fr.Database.QueryRowContext(ctx, `SELECT downloads_left FROM files WHERE alias = ?`, alias).Scan(&downloadsLeft)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if downloadsLeft == 0 {
+		return 0, repository.ErrNoDownloadsLeft
+	}
+
+	downloadsLeft--
+	res, err := fr.Database.ExecContext(ctx, `UPDATE files SET downloads_left = ? - 1 WHERE alias = ?`, downloadsLeft, alias)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	if rowsAffected == 0 {
+		return 0, repository.ErrAliasNotFound
+	}
+
+	return downloadsLeft, nil
+}
+
+func (fr *FileRepo) DeleteFile(ctx context.Context, alias string) (err error) {
 	const fn = "storage.mysql.DeleteFile"
 
-	stmt, err := r.Database.PrepareContext(ctx, "DELETE FROM files WHERE alias = ?")
+	stmt, err := fr.Database.PrepareContext(ctx, "DELETE FROM files WHERE alias = ?")
 	if err != nil {
 		return fmt.Errorf("%s: %w", fn, err)
 	}
