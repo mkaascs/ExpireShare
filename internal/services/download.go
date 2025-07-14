@@ -30,7 +30,7 @@ func (fs *FileService) DownloadFile(ctx context.Context, alias string) (_ *dto.D
 	downloadsLeft, err := fs.repo.DecrementDownloadsByAlias(ctx, alias)
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
-			fs.log.Info("failed to get file info", sl.Error(err))
+			fs.log.Info("failed decrement downloads left", sl.Error(err))
 			return nil, ErrAliasNotFound
 		}
 
