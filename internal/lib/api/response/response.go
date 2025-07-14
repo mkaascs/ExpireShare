@@ -24,6 +24,8 @@ func ValidationError(errs validator.ValidationErrors) Response {
 			validationErrorsMessages = append(validationErrorsMessages, fmt.Sprintf("%s is required", err.Field()))
 		case "url":
 			validationErrorsMessages = append(validationErrorsMessages, fmt.Sprintf("%s is not a URL", err.Field()))
+		case "min":
+			validationErrorsMessages = append(validationErrorsMessages, fmt.Sprintf("%s must be greater or equal than %s", err.Field(), err.Param()))
 		default:
 			validationErrorsMessages = append(validationErrorsMessages, fmt.Sprintf("%s is not a valid value", err.Field()))
 		}
