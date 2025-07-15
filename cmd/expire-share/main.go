@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"expire-share/internal/config"
 	"expire-share/internal/delivery/http/download"
@@ -12,6 +13,7 @@ import (
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/repository/mysql"
 	"expire-share/internal/services"
+	"expire-share/internal/services/worker"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"log"
@@ -44,6 +46,14 @@ func main() {
 	}()
 
 	lg.Info("repository was initialized successfully", slog.String("connection_string", cfg.ConnectionString))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	fileWorker := worker.NewFileWorker(repo, lg, *cfg)
+	go fileWorker.Start(ctx)
+
+	lg.Info("file worker was started")
 
 	router := chi.NewRouter()
 

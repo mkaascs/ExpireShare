@@ -32,9 +32,10 @@ type HttpServer struct {
 }
 
 type Service struct {
-	DefaultTtl   time.Duration `yaml:"default_ttl" default:"1h"`
-	MaxDownloads int16         `yaml:"default_max_downloads" default:"1"`
-	AliasLength  int16         `yaml:"alias_length" default:"6"`
+	DefaultTtl      time.Duration `yaml:"default_ttl" default:"1h"`
+	MaxDownloads    int16         `yaml:"default_max_downloads" default:"1"`
+	AliasLength     int16         `yaml:"alias_length" default:"6"`
+	FileWorkerDelay time.Duration `yaml:"file_worker_delay" default:"5m"`
 }
 
 func MustLoad() *Config {

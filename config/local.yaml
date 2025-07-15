@@ -12,3 +12,4 @@ service:
   default_ttl: 1h
   default_max_downloads: 1
   alias_length: 6
+  file_worker_delay: 5m

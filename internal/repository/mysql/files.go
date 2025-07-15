@@ -99,7 +99,7 @@ func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string)
 			return
 		}
 
-		err = tx.Rollback()
+		err = tx.Commit()
 	}(tx)
 
 	selectStmt, err := tx.PrepareContext(ctx, `SELECT downloads_left FROM files WHERE alias = ? AND expires_at > NOW()`)
@@ -184,10 +184,10 @@ func (fr *FileRepo) DeleteExpiredFiles(ctx context.Context) (_ []string, err err
 			return
 		}
 
-		err = tx.Rollback()
+		err = tx.Commit()
 	}(tx)
 
-	selectStmt, err := fr.Database.PrepareContext(ctx, `SELECT alias FROM files WHERE expires_at > NOW() FOR UPDATE`)
+	selectStmt, err := fr.Database.PrepareContext(ctx, `SELECT alias FROM files WHERE expires_at < NOW() FOR UPDATE`)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
@@ -221,7 +221,7 @@ func (fr *FileRepo) DeleteExpiredFiles(ctx context.Context) (_ []string, err err
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	updateStmt, err := tx.PrepareContext(ctx, `DELETE FROM files WHERE expires_at > NOW()`)
+	updateStmt, err := tx.PrepareContext(ctx, `DELETE FROM files WHERE expires_at < NOW()`)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}

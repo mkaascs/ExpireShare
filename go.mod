@@ -11,6 +11,7 @@ require (
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/joho/godotenv v1.5.1
+	golang.org/x/sync v0.12.0
 )
 
 require (
