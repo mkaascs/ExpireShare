@@ -15,7 +15,7 @@ import (
 
 func (fs *FileService) UploadFile(ctx context.Context, command dto.UploadFileCommand) (_ string, err error) {
 	const fn = "services.FileService.UploadFile"
-	fs.log = fs.log.With(slog.String("fn", fn))
+	fs.log = slog.With(slog.String("fn", fn))
 
 	if command.FileSize > fs.cfg.MaxFileSizeInBytes {
 		fs.log.Info("file size too big",

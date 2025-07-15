@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 )
 
-func (fs *FileService) DownloadFile(ctx context.Context, alias string) (_ *dto.DownloadFileResult, err error) {
+func (fs *FileService) DownloadFile(ctx context.Context, alias string) (*dto.DownloadFileResult, error) {
 	const fn = "services.FileService.DownloadFile"
-	fs.log = fs.log.With(slog.String("fn", fn))
+	fs.log = slog.With(slog.String("fn", fn))
 
 	fileInfo, err := fs.repo.GetFileByAlias(ctx, alias)
 	if err != nil {

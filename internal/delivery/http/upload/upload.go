@@ -32,7 +32,7 @@ type Response struct {
 func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.upload.New"
-		log = log.With(
+		log = slog.With(
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
 

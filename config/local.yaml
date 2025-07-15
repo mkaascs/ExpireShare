@@ -3,7 +3,7 @@ connection_string: "root:makas1506@tcp(127.0.0.1:3306)/ExpireShare?charset=utf8&
 storage:
   type: "local"
   path: "./files/"
-  max_file_size: "100mb"
+  max_file_size: "500mb"
 http_server:
   address: "localhost:6010"
   timeout: 4s

@@ -1,12 +1,11 @@
 package dto
 
 import (
-	"io"
 	"os"
 )
 
 type DownloadFileResult struct {
-	File     io.Reader
+	File     *os.File
 	FileInfo os.FileInfo
 	Close    func() error
 }

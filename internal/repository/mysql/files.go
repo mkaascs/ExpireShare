@@ -99,7 +99,7 @@ func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string)
 	}
 
 	downloadsLeft--
-	res, err := fr.Database.ExecContext(ctx, `UPDATE files SET downloads_left = ? - 1 WHERE alias = ?`, downloadsLeft, alias)
+	res, err := fr.Database.ExecContext(ctx, `UPDATE files SET downloads_left = ? WHERE alias = ?`, downloadsLeft, alias)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", fn, err)
 	}

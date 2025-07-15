@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"expire-share/internal/config"
+	"expire-share/internal/delivery/http/download"
 	"expire-share/internal/delivery/http/upload"
 	myMiddleware "expire-share/internal/delivery/middlewares"
 	pkgLog "expire-share/internal/lib/log"
@@ -52,6 +53,7 @@ func main() {
 
 	fileService := services.NewFileService(repo, lg, *cfg)
 	router.Post("/upload", upload.New(fileService, lg, *cfg))
+	router.Get("/download/{alias}", download.New(fileService, lg))
 
 	lg.Info("starting expire share server", slog.String("address", cfg.HttpServer.Address))
 
