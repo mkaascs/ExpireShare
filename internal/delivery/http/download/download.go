@@ -67,6 +67,10 @@ func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc 
 		data, err := io.ReadAll(file.File)
 		_, err = w.Write(data)
 		if err != nil {
+			if err := file.Close(); err != nil {
+				log.Error("failed to close file", sl.Error(err))
+			}
+
 			if errors.Is(err, syscall.EPIPE) || errors.Is(err, io.ErrClosedPipe) {
 				log.Info("client disconnected during download")
 				return

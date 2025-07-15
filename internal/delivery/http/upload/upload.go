@@ -29,7 +29,10 @@ type Response struct {
 	Alias string `json:"alias,omitempty"`
 }
 
+var validate *validator.Validate
+
 func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config) http.HandlerFunc {
+	validate = validator.New()
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.upload.New"
 		log = slog.With(
@@ -68,7 +71,7 @@ func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config
 			return
 		}
 
-		if err := validator.New().Struct(request); err != nil {
+		if err := validate.Struct(request); err != nil {
 			var validationErrors validator.ValidationErrors
 			errors.As(err, &validationErrors)
 			log.Error("invalid request", sl.Error(err))
