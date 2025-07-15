@@ -4,6 +4,7 @@ import (
 	"errors"
 	"expire-share/internal/config"
 	"expire-share/internal/delivery/http/download"
+	"expire-share/internal/delivery/http/file/get"
 	"expire-share/internal/delivery/http/upload"
 	myMiddleware "expire-share/internal/delivery/middlewares"
 	pkgLog "expire-share/internal/lib/log"
@@ -30,18 +31,18 @@ func main() {
 
 	repo, err := mysql.NewFileRepo(cfg.ConnectionString)
 	if err != nil {
-		lg.Error("failed to initialize storage:", sl.Error(err))
+		lg.Error("failed to initialize repository:", sl.Error(err))
 		os.Exit(1)
 	}
 
 	defer func() {
 		err := repo.Database.Close()
 		if err != nil {
-			lg.Error("failed to close storage:", sl.Error(err))
+			lg.Error("failed to close repository:", sl.Error(err))
 		}
 	}()
 
-	lg.Info("storage was initialized successfully", slog.String("connection_string", cfg.ConnectionString))
+	lg.Info("repository was initialized successfully", slog.String("connection_string", cfg.ConnectionString))
 
 	router := chi.NewRouter()
 
@@ -54,6 +55,7 @@ func main() {
 	fileService := services.NewFileService(repo, lg, *cfg)
 	router.Post("/upload", upload.New(fileService, lg, *cfg))
 	router.Get("/download/{alias}", download.New(fileService, lg))
+	router.Get("/file/{alias}", get.New(fileService, lg))
 
 	lg.Info("starting expire share server", slog.String("address", cfg.HttpServer.Address))
 

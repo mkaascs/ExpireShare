@@ -120,7 +120,7 @@ func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config
 			return
 		}
 
-		log.Info("file was uploaded", slog.String("alias", alias))
+		log.Info("file was successfully uploaded", slog.String("alias", alias))
 		render.Status(r, http.StatusCreated)
 		render.JSON(w, r, Response{
 			Response: response.Response{},
