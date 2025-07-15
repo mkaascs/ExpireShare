@@ -29,14 +29,7 @@ func (fr *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ 
 		return 0, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	defer func(stmt *sql.Stmt) {
-		if err != nil {
-			_ = stmt.Close()
-			return
-		}
-
-		err = stmt.Close()
-	}(stmt)
+	defer stmtClose(stmt, &err)
 
 	currentTime := time.Now()
 	res, err := stmt.ExecContext(ctx,
@@ -66,8 +59,15 @@ func (fr *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ 
 func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.File, error) {
 	const fn = "repository.mysql.GetFileByAlias"
 
+	stmt, err := fr.Database.PrepareContext(ctx, `SELECT file_path, alias, downloads_left, loaded_at, expires_at FROM files WHERE alias = ? AND expires_at > NOW()`)
+	if err != nil {
+		return domain.File{}, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	defer stmtClose(stmt, &err)
+
 	var file domain.File
-	err := fr.Database.QueryRowContext(ctx, `SELECT file_path, alias, downloads_left, loaded_at, expires_at FROM files WHERE alias = ? AND expires_at > NOW()`, alias).Scan(
+	err = stmt.QueryRowContext(ctx, alias).Scan(
 		&file.FilePath,
 		&file.Alias,
 		&file.DownloadsLeft,
@@ -88,8 +88,29 @@ func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.Fi
 func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string) (int16, error) {
 	const fn = "repository.mysql.DecrementDownloadsByAlias"
 
+	tx, err := fr.Database.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	defer func(tx *sql.Tx) {
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+
+		err = tx.Rollback()
+	}(tx)
+
+	selectStmt, err := tx.PrepareContext(ctx, `SELECT downloads_left FROM files WHERE alias = ? AND expires_at > NOW()`)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	defer stmtClose(selectStmt, &err)
+
 	var downloadsLeft int16
-	err := fr.Database.QueryRowContext(ctx, `SELECT downloads_left FROM files WHERE alias = ? AND expires_at > NOW()`, alias).Scan(&downloadsLeft)
+	err = selectStmt.QueryRowContext(ctx, alias).Scan(&downloadsLeft)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", fn, err)
 	}
@@ -99,7 +120,14 @@ func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string)
 	}
 
 	downloadsLeft--
-	res, err := fr.Database.ExecContext(ctx, `UPDATE files SET downloads_left = ? WHERE alias = ? AND expires_at > NOW()`, downloadsLeft, alias)
+	updateStmt, err := tx.PrepareContext(ctx, `UPDATE files SET downloads_left = ? WHERE alias = ? AND expires_at > NOW()`)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	defer stmtClose(updateStmt, &err)
+
+	res, err := updateStmt.ExecContext(ctx, downloadsLeft, alias)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", fn, err)
 	}
@@ -124,14 +152,7 @@ func (fr *FileRepo) DeleteFile(ctx context.Context, alias string) (err error) {
 		return fmt.Errorf("%s: %w", fn, err)
 	}
 
-	defer func(stmt *sql.Stmt) {
-		if err != nil {
-			_ = stmt.Close()
-			return
-		}
-
-		err = stmt.Close()
-	}(stmt)
+	defer stmtClose(stmt, &err)
 
 	res, err := stmt.ExecContext(ctx, alias)
 	if err != nil {
@@ -150,6 +171,71 @@ func (fr *FileRepo) DeleteFile(ctx context.Context, alias string) (err error) {
 	return nil
 }
 
+func (fr *FileRepo) DeleteExpiredFiles(ctx context.Context) (_ []string, err error) {
+	const fn = "repository.mysql.DeleteExpiredFiles"
+	tx, err := fr.Database.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	defer func(tx *sql.Tx) {
+		if err != nil {
+			_ = tx.Rollback()
+			return
+		}
+
+		err = tx.Rollback()
+	}(tx)
+
+	selectStmt, err := fr.Database.PrepareContext(ctx, `SELECT alias FROM files WHERE expires_at > NOW() FOR UPDATE`)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	defer stmtClose(selectStmt, &err)
+
+	rows, err := selectStmt.QueryContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	defer func(rows *sql.Rows) {
+		if err != nil {
+			_ = rows.Close()
+		}
+
+		err = rows.Close()
+	}(rows)
+
+	var aliases []string
+	for rows.Next() {
+		var alias string
+		if err := rows.Scan(&alias); err != nil {
+			return nil, fmt.Errorf("%s: %w", fn, err)
+		}
+
+		aliases = append(aliases, alias)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	updateStmt, err := tx.PrepareContext(ctx, `DELETE FROM files WHERE expires_at > NOW()`)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	defer stmtClose(updateStmt, &err)
+
+	_, err = updateStmt.ExecContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", fn, err)
+	}
+
+	return aliases, nil
+}
+
 func NewFileRepo(connectionString string) (*FileRepo, error) {
 	const fn = "repository.mysql.NewFileRepo"
 
@@ -163,4 +249,13 @@ func NewFileRepo(connectionString string) (*FileRepo, error) {
 	}
 
 	return &FileRepo{Database: db}, nil
+}
+
+func stmtClose(stmt *sql.Stmt, err *error) {
+	if *err != nil {
+		_ = stmt.Close()
+		return
+	}
+
+	*err = stmt.Close()
 }
