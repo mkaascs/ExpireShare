@@ -12,11 +12,11 @@ import (
 	"path/filepath"
 )
 
-func (fs *FileService) DownloadFile(ctx context.Context, alias string) (*dto.DownloadFileResult, error) {
+func (fs *FileService) DownloadFile(ctx context.Context, command dto.DownloadFileCommand) (*dto.DownloadFileResult, error) {
 	const fn = "services.FileService.DownloadFile"
 	fs.log = slog.With(slog.String("fn", fn))
 
-	fileInfo, err := fs.repo.GetFileByAlias(ctx, alias)
+	fileInfo, err := fs.repo.GetFileByAlias(ctx, command.Alias)
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
 			fs.log.Info("failed to get file info", sl.Error(err))
@@ -27,7 +27,13 @@ func (fs *FileService) DownloadFile(ctx context.Context, alias string) (*dto.Dow
 		return nil, fmt.Errorf("%s: failed to get file info: %w", fn, err)
 	}
 
-	downloadsLeft, err := fs.repo.DecrementDownloadsByAlias(ctx, alias)
+	err = fs.checkPassword(fileInfo, command.Password)
+	if err != nil {
+		fs.log.Info("failed to check password", sl.Error(err))
+		return nil, fmt.Errorf("%s: failed to check password: %w", fn, err)
+	}
+
+	downloadsLeft, err := fs.repo.DecrementDownloadsByAlias(ctx, command.Alias)
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
 			fs.log.Info("failed decrement downloads left", sl.Error(err))
@@ -78,13 +84,13 @@ func (fs *FileService) DownloadFile(ctx context.Context, alias string) (*dto.Dow
 			return err
 		}
 
-		err = os.RemoveAll(filepath.Join(fs.cfg.Path, alias))
+		err = os.RemoveAll(filepath.Join(fs.cfg.Path, command.Alias))
 		if err != nil {
 			fs.log.Error("failed to remove file", sl.Error(err))
 			return fmt.Errorf("%s: failed to remove file: %w", fn, err)
 		}
 
-		err = fs.repo.DeleteFile(ctx, alias)
+		err = fs.repo.DeleteFile(ctx, command.Alias)
 		if err != nil {
 			fs.log.Error("failed to delete file from repository", sl.Error(err))
 			return fmt.Errorf("%s: failed to delete file from repository: %w", fn, err)

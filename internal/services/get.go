@@ -11,11 +11,11 @@ import (
 	"time"
 )
 
-func (fs *FileService) GetFileByAlias(ctx context.Context, alias string) (*dto.GetFileResult, error) {
+func (fs *FileService) GetFileByAlias(ctx context.Context, command dto.GetFileCommand) (*dto.GetFileResult, error) {
 	const fn = "services.FileService.GetFileByAlias"
 	fs.log = slog.With(slog.String("fn", fn))
 
-	file, err := fs.repo.GetFileByAlias(ctx, alias)
+	fileInfo, err := fs.repo.GetFileByAlias(ctx, command.Alias)
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
 			fs.log.Info("failed to get file info", sl.Error(err))
@@ -26,9 +26,15 @@ func (fs *FileService) GetFileByAlias(ctx context.Context, alias string) (*dto.G
 		return nil, fmt.Errorf("%s: failed to get file info: %w", fn, err)
 	}
 
+	err = fs.checkPassword(fileInfo, command.Password)
+	if err != nil {
+		fs.log.Info("failed to check password", sl.Error(err))
+		return nil, fmt.Errorf("%s: failed to check password: %w", fn, err)
+	}
+
 	res := dto.GetFileResult{
-		DownloadsLeft: file.DownloadsLeft,
-		ExpiresIn:     time.Until(file.ExpiresAt),
+		DownloadsLeft: fileInfo.DownloadsLeft,
+		ExpiresIn:     time.Until(fileInfo.ExpiresAt),
 	}
 
 	return &res, nil

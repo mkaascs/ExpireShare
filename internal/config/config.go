@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -38,8 +39,8 @@ type Service struct {
 	FileWorkerDelay time.Duration `yaml:"file_worker_delay" default:"5m"`
 }
 
-func MustLoad() *Config {
-	cfg, err := Load()
+func MustLoad(envPath string) *Config {
+	cfg, err := Load(envPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,8 +48,9 @@ func MustLoad() *Config {
 	return cfg
 }
 
-func Load() (*Config, error) {
-	if err := godotenv.Load(); err != nil {
+func Load(envPath string) (*Config, error) {
+	path := filepath.Join(envPath, ".env")
+	if err := godotenv.Load(path); err != nil {
 		return nil, fmt.Errorf("failed to load .env file: %w", err)
 	}
 

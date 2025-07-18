@@ -7,6 +7,7 @@ import (
 	"expire-share/internal/lib/sizes"
 	"expire-share/internal/services/dto"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"io"
 	"log/slog"
 	"os"
@@ -54,11 +55,18 @@ func (fs *FileService) UploadFile(ctx context.Context, command dto.UploadFileCom
 		return "", fmt.Errorf("%s: failed to copy file: %w", fn, err)
 	}
 
+	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(command.Password), bcrypt.DefaultCost)
+	if err != nil {
+		fs.log.Error("failed to hash password", sl.Error(err))
+		return "", fmt.Errorf("%s: failed to hash password: %w", fn, err)
+	}
+
 	addFileCommand := dto.AddFileCommand{
 		FilePath:     filepath.Join(newAlias, command.Filename),
 		Alias:        newAlias,
 		MaxDownloads: command.MaxDownloads,
 		TTL:          command.TTL,
+		PasswordHash: string(hashedBytes),
 	}
 
 	_, err = fs.repo.AddFile(ctx, addFileCommand)

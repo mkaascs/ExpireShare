@@ -24,7 +24,7 @@ type FileRepo struct {
 func (fr *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ int64, err error) {
 	const fn = "repository.mysql.AddFile"
 
-	stmt, err := fr.Database.PrepareContext(ctx, `INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at) VALUES(?, ?, ?, ?, ?)`)
+	stmt, err := fr.Database.PrepareContext(ctx, `INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at, password_hash) VALUES(?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", fn, err)
 	}
@@ -37,7 +37,8 @@ func (fr *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ 
 		command.Alias,
 		command.MaxDownloads,
 		currentTime,
-		currentTime.Add(command.TTL))
+		currentTime.Add(command.TTL),
+		command.PasswordHash)
 
 	if err != nil {
 		var mysqlErr *mysql.MySQLError
@@ -59,7 +60,7 @@ func (fr *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ 
 func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.File, error) {
 	const fn = "repository.mysql.GetFileByAlias"
 
-	stmt, err := fr.Database.PrepareContext(ctx, `SELECT file_path, alias, downloads_left, loaded_at, expires_at FROM files WHERE alias = ? AND expires_at > NOW()`)
+	stmt, err := fr.Database.PrepareContext(ctx, `SELECT file_path, alias, downloads_left, loaded_at, expires_at, password_hash FROM files WHERE alias = ? AND expires_at > NOW()`)
 	if err != nil {
 		return domain.File{}, fmt.Errorf("%s: %w", fn, err)
 	}
@@ -72,7 +73,8 @@ func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.Fi
 		&file.Alias,
 		&file.DownloadsLeft,
 		&file.LoadedAt,
-		&file.ExpiresAt)
+		&file.ExpiresAt,
+		&file.PasswordHash)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

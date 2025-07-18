@@ -5,6 +5,7 @@ import (
 	"expire-share/internal/config"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/interfaces"
+	"fmt"
 	"golang.org/x/sync/errgroup"
 	"log/slog"
 	"os"
@@ -45,6 +46,8 @@ func (fw *FileWorker) Start(ctx context.Context) {
 						fw.log.Error("failed to delete file from storage", sl.Error(err))
 					}
 				}
+
+				fw.log.Info(fmt.Sprintf("deleted %d expired files", len(aliases)))
 			}
 		}
 	})

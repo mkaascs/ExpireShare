@@ -23,7 +23,12 @@ import (
 )
 
 func main() {
-	cfg := config.MustLoad()
+	envPath := ""
+	if len(os.Args) > 2 {
+		envPath = os.Args[1]
+	}
+
+	cfg := config.MustLoad(envPath)
 
 	lg, err := pkgLog.New(cfg.Environment)
 	if err != nil {
