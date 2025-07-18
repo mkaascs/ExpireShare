@@ -14,19 +14,17 @@ type UploadFileCommand struct {
 	TTL          time.Duration
 }
 
-type byAliasCommand struct {
+type DownloadFileCommand struct {
 	Alias    string
 	Password string
 }
 
-type DownloadFileCommand struct {
-	byAliasCommand
-}
-
 type GetFileCommand struct {
-	byAliasCommand
+	Alias    string
+	Password string
 }
 
 type DeleteFileCommand struct {
-	byAliasCommand
+	Alias    string
+	Password string
 }

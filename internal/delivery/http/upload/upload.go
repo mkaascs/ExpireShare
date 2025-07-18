@@ -22,6 +22,7 @@ import (
 type Request struct {
 	MaxDownloads int16  `json:"max_downloads,omitempty" validate:"min=1"`
 	TTL          string `json:"ttl,omitempty"`
+	Password     string `json:"password,omitempty"`
 }
 
 type Response struct {
@@ -51,6 +52,7 @@ func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config
 		request := Request{
 			MaxDownloads: cfg.MaxDownloads,
 			TTL:          cfg.DefaultTtl.String(),
+			Password:     "",
 		}
 
 		jsonData := r.FormValue("json")
@@ -100,6 +102,7 @@ func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config
 			File:         file,
 			FileSize:     header.Size,
 			Filename:     header.Filename,
+			Password:     request.Password,
 			MaxDownloads: request.MaxDownloads,
 			TTL:          parsedTtl,
 		})

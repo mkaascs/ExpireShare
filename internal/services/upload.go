@@ -55,10 +55,13 @@ func (fs *FileService) UploadFile(ctx context.Context, command dto.UploadFileCom
 		return "", fmt.Errorf("%s: failed to copy file: %w", fn, err)
 	}
 
-	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(command.Password), bcrypt.DefaultCost)
-	if err != nil {
-		fs.log.Error("failed to hash password", sl.Error(err))
-		return "", fmt.Errorf("%s: failed to hash password: %w", fn, err)
+	var hashedBytes []byte
+	if len(command.Password) > 0 {
+		hashedBytes, err = bcrypt.GenerateFromPassword([]byte(command.Password), bcrypt.DefaultCost)
+		if err != nil {
+			fs.log.Error("failed to hash password", sl.Error(err))
+			return "", fmt.Errorf("%s: failed to hash password: %w", fn, err)
+		}
 	}
 
 	addFileCommand := dto.AddFileCommand{

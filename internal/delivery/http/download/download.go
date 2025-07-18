@@ -6,9 +6,11 @@ import (
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services"
+	"expire-share/internal/services/dto"
 	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/render"
 	"io"
 	"log/slog"
 	"mime"
@@ -16,6 +18,10 @@ import (
 	"path/filepath"
 	"syscall"
 )
+
+type Request struct {
+	Password string `json:"password,omitempty"`
+}
 
 type Response struct {
 	response.Response
@@ -38,13 +44,39 @@ func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc 
 			return
 		}
 
+		var request Request
+		err := render.DecodeJSON(r.Body, &request)
+		if err != nil {
+			log.Info("failed to decode json body", sl.Error(err))
+			request.Password = ""
+		}
+
+		command := dto.DownloadFileCommand{
+			Alias:    alias,
+			Password: request.Password,
+		}
+
 		ctx := r.Context()
-		file, err := fileService.DownloadFile(ctx, alias)
+		file, err := fileService.DownloadFile(ctx, command)
 		if err != nil {
 			if errors.Is(err, services.ErrAliasNotFound) {
 				log.Info("file with current alias not found", slog.String("alias", alias))
 				response.RenderError(w, r,
 					http.StatusNotFound, "file with current alias not found")
+				return
+			}
+
+			if errors.Is(err, services.ErrPasswordRequired) {
+				log.Info("password is required", slog.String("alias", alias))
+				response.RenderError(w, r,
+					http.StatusUnauthorized, "password is required")
+				return
+			}
+
+			if errors.Is(err, services.ErrIncorrectPassword) {
+				log.Info("incorrect password", slog.String("alias", alias))
+				response.RenderError(w, r,
+					http.StatusForbidden, "incorrect password")
 				return
 			}
 

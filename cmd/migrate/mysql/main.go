@@ -24,7 +24,7 @@ func main() {
 		},
 	}
 
-	cfg := config.MustLoad()
+	cfg := config.MustLoad("")
 	lg, err := pkgLog.New(cfg.Environment)
 	if err != nil {
 		log.Fatal(err)
