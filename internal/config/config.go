@@ -11,6 +11,12 @@ import (
 	"time"
 )
 
+const (
+	EnvironmentLocal = "local"
+	EnvironmentDev   = "dev"
+	EnvironmentProd  = "prod"
+)
+
 type Config struct {
 	Environment      string `yaml:"environment" default:"local"`
 	ConnectionString string `yaml:"connection_string" required:"true"`

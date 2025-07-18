@@ -1,5 +1,9 @@
 package main
 
+// @title Expire Share API
+// @version 1.0
+// @description A self-destructing file-sharing service with TTL and download limits
+
 import (
 	"context"
 	"errors"
@@ -16,6 +20,7 @@ import (
 	"expire-share/internal/services/worker"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"log"
 	"log/slog"
 	"net/http"
@@ -69,6 +74,13 @@ func main() {
 	router.Use(myMiddleware.NewLogger(lg))
 
 	fileService := services.NewFileService(repo, lg, *cfg)
+
+	if cfg.Environment == config.EnvironmentLocal {
+		router.Get("/swagger/*", httpSwagger.Handler(
+			httpSwagger.URL("/swagger/doc.json"),
+		))
+	}
+
 	router.Post("/upload", upload.New(fileService, lg, *cfg))
 	router.Get("/download/{alias}", download.New(fileService, lg))
 	router.Get("/file/{alias}", get.New(fileService, lg))

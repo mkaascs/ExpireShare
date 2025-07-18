@@ -20,9 +20,9 @@ import (
 )
 
 type Request struct {
-	MaxDownloads int16  `json:"max_downloads,omitempty" validate:"min=1"`
-	TTL          string `json:"ttl,omitempty"`
-	Password     string `json:"password,omitempty"`
+	MaxDownloads int16  `json:"max_downloads,omitempty" validate:"min=1" example:"5"`
+	TTL          string `json:"ttl,omitempty" example:"2h30m"`
+	Password     string `json:"password,omitempty" example:"1234"`
 }
 
 type Response struct {
@@ -32,6 +32,17 @@ type Response struct {
 
 var validate *validator.Validate
 
+// New @Summary Upload file
+// @Description Uploads file on server
+// @Tags file
+// @Accept multipart/json
+// @Produce json
+// @Param request body Request true "File data"
+// @Success 201 {object} Response
+// @Failure 400 {object} Response
+// @Failure 422 {object} Response
+// @Failure 500 {object} Response
+// @Router /upload [post]
 func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config) http.HandlerFunc {
 	validate = validator.New()
 	return func(w http.ResponseWriter, r *http.Request) {

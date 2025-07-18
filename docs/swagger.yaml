@@ -1,0 +1,224 @@
+definitions:
+  download.Request:
+    properties:
+      password:
+        example: "1234"
+        type: string
+    type: object
+  download.Response:
+    properties:
+      errors:
+        items:
+          type: string
+        type: array
+    type: object
+  get.Request:
+    properties:
+      password:
+        example: "1234"
+        type: string
+    type: object
+  get.Response:
+    properties:
+      downloads_left:
+        type: integer
+      errors:
+        items:
+          type: string
+        type: array
+      expires_in:
+        type: string
+    type: object
+  remove.Request:
+    properties:
+      password:
+        example: "1234"
+        type: string
+    type: object
+  remove.Response:
+    properties:
+      errors:
+        items:
+          type: string
+        type: array
+    type: object
+  upload.Request:
+    properties:
+      max_downloads:
+        example: 5
+        minimum: 1
+        type: integer
+      password:
+        example: "1234"
+        type: string
+      ttl:
+        example: 2h30m
+        type: string
+    type: object
+  upload.Response:
+    properties:
+      alias:
+        type: string
+      errors:
+        items:
+          type: string
+        type: array
+    type: object
+info:
+  contact: {}
+  description: A self-destructing file-sharing service with TTL and download limits
+  title: Expire Share API
+  version: "1.0"
+paths:
+  /download:
+    get:
+      consumes:
+      - application/json
+      description: Downloads uploaded file by its alias
+      parameters:
+      - description: File data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/download.Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/download.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/download.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/download.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/download.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/download.Response'
+      tags:
+      - file
+  /file:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes uploaded file by its alias
+      parameters:
+      - description: File data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/remove.Request'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/remove.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/remove.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/remove.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/remove.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/remove.Response'
+      tags:
+      - file
+    get:
+      consumes:
+      - application/json
+      description: Get info about uploaded file by its alias
+      parameters:
+      - description: File data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/get.Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/get.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/get.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/get.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/get.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/get.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/get.Response'
+      tags:
+      - file
+  /upload:
+    post:
+      consumes:
+      - multipart/json
+      description: Uploads file on server
+      parameters:
+      - description: File data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/upload.Request'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/upload.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/upload.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/upload.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/upload.Response'
+      tags:
+      - file
+swagger: "2.0"

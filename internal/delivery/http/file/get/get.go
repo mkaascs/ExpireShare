@@ -16,7 +16,7 @@ import (
 )
 
 type Request struct {
-	Password string `json:"password,omitempty"`
+	Password string `json:"password,omitempty" example:"1234"`
 }
 
 type Response struct {
@@ -25,6 +25,19 @@ type Response struct {
 	ExpiresIn     string `json:"expires_in"`
 }
 
+// New @Summary Get file info
+// @Description Get info about uploaded file by its alias
+// @Tags file
+// @Accept json
+// @Produce json
+// @Param request body Request true "File data"
+// @Success 200 {object} Response
+// @Failure 400 {object} Response
+// @Failure 401 {object} Response
+// @Failure 403 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} Response
+// @Router /file [get]
 func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.file.get.New"

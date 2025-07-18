@@ -1,30 +1,25 @@
 package log
 
 import (
+	"expire-share/internal/config"
 	"fmt"
 	"log/slog"
 	"os"
-)
-
-const (
-	environmentLocal = "local"
-	environmentDev   = "dev"
-	environmentProd  = "prod"
 )
 
 func New(environment string) (*slog.Logger, error) {
 	var lg *slog.Logger
 
 	switch environment {
-	case environmentLocal:
+	case config.EnvironmentLocal:
 		lg = slog.New(slog.NewTextHandler(
 			os.Stdout,
 			&slog.HandlerOptions{Level: slog.LevelDebug}))
-	case environmentDev:
+	case config.EnvironmentDev:
 		lg = slog.New(slog.NewJSONHandler(
 			os.Stdout,
 			&slog.HandlerOptions{Level: slog.LevelDebug}))
-	case environmentProd:
+	case config.EnvironmentProd:
 		lg = slog.New(slog.NewJSONHandler(
 			os.Stdout,
 			&slog.HandlerOptions{Level: slog.LevelInfo}))
