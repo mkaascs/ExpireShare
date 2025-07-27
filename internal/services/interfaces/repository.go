@@ -17,4 +17,5 @@ type FileRepo interface {
 type UserRepo interface {
 	AddUser(ctx context.Context, command dto.AddUserCommand) (int64, error)
 	GetUserById(ctx context.Context, id int64) (domain.User, error)
+	GetUserAliasesById(ctx context.Context, id int64) ([]string, error)
 }

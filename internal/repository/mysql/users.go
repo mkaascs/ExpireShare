@@ -67,6 +67,42 @@ func (ur *UserRepo) GetUserById(ctx context.Context, id int64) (_ domain.User, e
 	return user, nil
 }
 
+func (ur *UserRepo) GetUserAliasesById(ctx context.Context, id int64) (_ []string, err error) {
+	const fn = "repository.UserRepo.GetUserAliasesById"
+
+	stmt, err := ur.Database.Prepare(`SELECT alias FROM files WHERE user_id = ? AND expires_at > NOW()`)
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
+	}
+
+	defer stmtClose(stmt, &err)
+	rows, err := stmt.QueryContext(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to query statement: %w", fn, err)
+	}
+
+	defer func(rows *sql.Rows) {
+		if err != nil {
+			_ = rows.Close()
+			return
+		}
+
+		err = rows.Close()
+	}(rows)
+
+	var aliases []string
+	for rows.Next() {
+		var alias string
+		if err := rows.Scan(&alias); err != nil {
+			return nil, fmt.Errorf("%s: failed to scan row: %w", fn, err)
+		}
+
+		aliases = append(aliases, alias)
+	}
+
+	return aliases, nil
+}
+
 func NewUserRepo(db *sql.DB) *UserRepo {
 	return &UserRepo{Database: db}
 }

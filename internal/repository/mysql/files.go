@@ -200,6 +200,7 @@ func (fr *FileRepo) DeleteExpiredFiles(ctx context.Context) (_ []string, err err
 	defer func(rows *sql.Rows) {
 		if err != nil {
 			_ = rows.Close()
+			return
 		}
 
 		err = rows.Close()
