@@ -9,4 +9,10 @@ type File struct {
 	PasswordHash  string
 	LoadedAt      time.Time
 	ExpiresAt     time.Time
+	UserId        int64
+}
+
+type User struct {
+	Id int64
+	IP string
 }

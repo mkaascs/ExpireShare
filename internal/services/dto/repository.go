@@ -9,3 +9,7 @@ type AddFileCommand struct {
 	PasswordHash string
 	TTL          time.Duration
 }
+
+type AddUserCommand struct {
+	IP string
+}
