@@ -7,7 +7,6 @@ import (
 	"expire-share/internal/delivery/interfaces"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services"
 	"expire-share/internal/services/dto"
 	"fmt"
 	"github.com/go-chi/chi/middleware"
@@ -119,7 +118,7 @@ func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config
 		})
 
 		if err != nil {
-			if errors.Is(err, services.ErrFileSizeTooBig) {
+			if errors.Is(err, file.ErrFileSizeTooBig) {
 				log.Error("file is too big", sl.Error(err))
 				response.RenderError(w, r,
 					http.StatusUnprocessableEntity,

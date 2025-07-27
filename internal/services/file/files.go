@@ -1,4 +1,4 @@
-package services
+package file
 
 import (
 	"context"
@@ -19,17 +19,18 @@ var (
 	ErrIncorrectPassword = errors.New("incorrect password")
 )
 
-type FileService struct {
-	repo interfaces.FileRepo
-	cfg  config.Config
-	log  *slog.Logger
+type Service struct {
+	fileRepo interfaces.FileRepo
+	userRepo interfaces.UserRepo
+	cfg      config.Config
+	log      *slog.Logger
 }
 
-func (fs *FileService) checkPasswordByAlias(ctx context.Context, alias string, password string) error {
+func (fs *Service) checkPasswordByAlias(ctx context.Context, alias string, password string) error {
 	const fn = "services.FileService.auth"
 	fs.log = slog.With(slog.String("fn", fn))
 
-	fileInfo, err := fs.repo.GetFileByAlias(ctx, alias)
+	fileInfo, err := fs.fileRepo.GetFileByAlias(ctx, alias)
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
 			fs.log.Info("failed to delete file info", sl.Error(err))
@@ -43,7 +44,7 @@ func (fs *FileService) checkPasswordByAlias(ctx context.Context, alias string, p
 	return fs.checkPassword(fileInfo, password)
 }
 
-func (fs *FileService) checkPassword(fileInfo domain.File, password string) error {
+func (fs *Service) checkPassword(fileInfo domain.File, password string) error {
 	if fileInfo.PasswordHash != "" && password == "" {
 		fs.log.Info("password is required for access")
 		return ErrPasswordRequired
@@ -58,6 +59,9 @@ func (fs *FileService) checkPassword(fileInfo domain.File, password string) erro
 	return nil
 }
 
-func NewFileService(repo interfaces.FileRepo, log *slog.Logger, cfg config.Config) *FileService {
-	return &FileService{repo: repo, log: log, cfg: cfg}
+func NewFileService(fileRepo interfaces.FileRepo, userRepo interfaces.UserRepo, log *slog.Logger, cfg config.Config) *Service {
+	return &Service{fileRepo: fileRepo,
+		userRepo: userRepo,
+		log:      log,
+		cfg:      cfg}
 }

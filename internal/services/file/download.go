@@ -1,4 +1,4 @@
-package services
+package file
 
 import (
 	"context"
@@ -12,11 +12,11 @@ import (
 	"path/filepath"
 )
 
-func (fs *FileService) DownloadFile(ctx context.Context, command dto.DownloadFileCommand) (*dto.DownloadFileResult, error) {
+func (fs *Service) DownloadFile(ctx context.Context, command dto.DownloadFileCommand) (*dto.DownloadFileResult, error) {
 	const fn = "services.FileService.DownloadFile"
 	fs.log = slog.With(slog.String("fn", fn))
 
-	fileInfo, err := fs.repo.GetFileByAlias(ctx, command.Alias)
+	fileInfo, err := fs.fileRepo.GetFileByAlias(ctx, command.Alias)
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
 			fs.log.Info("failed to get file info", sl.Error(err))
@@ -33,7 +33,7 @@ func (fs *FileService) DownloadFile(ctx context.Context, command dto.DownloadFil
 		return nil, fmt.Errorf("%s: failed to check password: %w", fn, err)
 	}
 
-	downloadsLeft, err := fs.repo.DecrementDownloadsByAlias(ctx, command.Alias)
+	downloadsLeft, err := fs.fileRepo.DecrementDownloadsByAlias(ctx, command.Alias)
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
 			fs.log.Info("failed decrement downloads left", sl.Error(err))
@@ -90,7 +90,7 @@ func (fs *FileService) DownloadFile(ctx context.Context, command dto.DownloadFil
 			return fmt.Errorf("%s: failed to remove file: %w", fn, err)
 		}
 
-		err = fs.repo.DeleteFile(ctx, command.Alias)
+		err = fs.fileRepo.DeleteFile(ctx, command.Alias)
 		if err != nil {
 			fs.log.Error("failed to delete file from repository", sl.Error(err))
 			return fmt.Errorf("%s: failed to delete file from repository: %w", fn, err)

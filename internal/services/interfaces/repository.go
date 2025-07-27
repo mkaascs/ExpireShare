@@ -13,3 +13,8 @@ type FileRepo interface {
 	DeleteFile(ctx context.Context, alias string) error
 	DeleteExpiredFiles(ctx context.Context) ([]string, error)
 }
+
+type UserRepo interface {
+	AddUser(ctx context.Context, command dto.AddUserCommand) (int64, error)
+	GetUserById(ctx context.Context, id int64) (domain.User, error)
+}

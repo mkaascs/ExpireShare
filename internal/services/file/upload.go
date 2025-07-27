@@ -1,4 +1,4 @@
-package services
+package file
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 )
 
-func (fs *FileService) UploadFile(ctx context.Context, command dto.UploadFileCommand) (_ string, err error) {
+func (fs *Service) UploadFile(ctx context.Context, command dto.UploadFileCommand) (_ string, err error) {
 	const fn = "services.FileService.UploadFile"
 	fs.log = slog.With(slog.String("fn", fn))
 
@@ -72,7 +72,7 @@ func (fs *FileService) UploadFile(ctx context.Context, command dto.UploadFileCom
 		PasswordHash: string(hashedBytes),
 	}
 
-	_, err = fs.repo.AddFile(ctx, addFileCommand)
+	_, err = fs.fileRepo.AddFile(ctx, addFileCommand)
 	if err != nil {
 		fs.log.Error("failed to add file", sl.Error(err))
 		return "", fmt.Errorf("%s: failed to add file: %w", fn, err)

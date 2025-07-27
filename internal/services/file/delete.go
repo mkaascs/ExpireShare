@@ -1,4 +1,4 @@
-package services
+package file
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 )
 
-func (fs *FileService) DeleteFile(ctx context.Context, command dto.DeleteFileCommand) error {
+func (fs *Service) DeleteFile(ctx context.Context, command dto.DeleteFileCommand) error {
 	const fn = "services.FileService.DeleteFile"
 	fs.log = slog.With(slog.String("fn", fn))
 
@@ -22,7 +22,7 @@ func (fs *FileService) DeleteFile(ctx context.Context, command dto.DeleteFileCom
 		return fmt.Errorf("%s: failed to check password: %w", fn, err)
 	}
 
-	err = fs.repo.DeleteFile(ctx, command.Alias)
+	err = fs.fileRepo.DeleteFile(ctx, command.Alias)
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
 			fs.log.Info("failed to delete file info", sl.Error(err))

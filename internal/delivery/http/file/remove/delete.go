@@ -5,8 +5,8 @@ import (
 	"expire-share/internal/delivery/interfaces"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services"
 	"expire-share/internal/services/dto"
+	"expire-share/internal/services/file"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
@@ -66,7 +66,7 @@ func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc 
 		ctx := r.Context()
 		err = fileService.DeleteFile(ctx, command)
 		if err != nil {
-			if errors.Is(err, services.ErrAliasNotFound) {
+			if errors.Is(err, file.ErrAliasNotFound) {
 				log.Info("file with current alias not found", slog.String("alias", alias))
 				response.RenderError(w, r,
 					http.StatusNotFound,
@@ -74,14 +74,14 @@ func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc 
 				return
 			}
 
-			if errors.Is(err, services.ErrPasswordRequired) {
+			if errors.Is(err, file.ErrPasswordRequired) {
 				log.Info("password is required", slog.String("alias", alias))
 				response.RenderError(w, r,
 					http.StatusUnauthorized, "password is required")
 				return
 			}
 
-			if errors.Is(err, services.ErrIncorrectPassword) {
+			if errors.Is(err, file.ErrIncorrectPassword) {
 				log.Info("incorrect password", slog.String("alias", alias))
 				response.RenderError(w, r,
 					http.StatusForbidden, "incorrect password")

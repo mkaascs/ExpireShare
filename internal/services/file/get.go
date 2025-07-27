@@ -1,4 +1,4 @@
-package services
+package file
 
 import (
 	"context"
@@ -11,11 +11,11 @@ import (
 	"time"
 )
 
-func (fs *FileService) GetFileByAlias(ctx context.Context, command dto.GetFileCommand) (*dto.GetFileResult, error) {
+func (fs *Service) GetFileByAlias(ctx context.Context, command dto.GetFileCommand) (*dto.GetFileResult, error) {
 	const fn = "services.FileService.GetFileByAlias"
 	fs.log = slog.With(slog.String("fn", fn))
 
-	fileInfo, err := fs.repo.GetFileByAlias(ctx, command.Alias)
+	fileInfo, err := fs.fileRepo.GetFileByAlias(ctx, command.Alias)
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
 			fs.log.Info("failed to get file info", sl.Error(err))
