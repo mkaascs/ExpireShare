@@ -234,17 +234,6 @@ func (fr *FileRepo) DeleteExpiredFiles(ctx context.Context) (_ []string, err err
 	return aliases, nil
 }
 
-func NewFileRepo(connectionString string) (*FileRepo, error) {
-	const fn = "repository.mysql.NewFileRepo"
-
-	db, err := sql.Open("mysql", connectionString)
-	if err != nil {
-		return nil, fmt.Errorf("%s: failed to open database: %w", fn, err)
-	}
-
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("%s: failed to ping database: %w", fn, err)
-	}
-
-	return &FileRepo{Database: db}, nil
+func NewFileRepo(db *sql.DB) *FileRepo {
+	return &FileRepo{Database: db}
 }

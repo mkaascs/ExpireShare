@@ -67,17 +67,6 @@ func (ur *UserRepo) GetUserById(ctx context.Context, id int64) (_ domain.User, e
 	return user, nil
 }
 
-func NewUserRepo(connectionString string) (*UserRepo, error) {
-	const fn = "repository.mysql.NewUserRepo"
-
-	db, err := sql.Open("mysql", connectionString)
-	if err != nil {
-		return nil, fmt.Errorf("%s: failed to open database: %w", fn, err)
-	}
-
-	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("%s: failed to ping database: %w", fn, err)
-	}
-
-	return &UserRepo{Database: db}, nil
+func NewUserRepo(db *sql.DB) *UserRepo {
+	return &UserRepo{Database: db}
 }
