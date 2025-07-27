@@ -42,14 +42,16 @@ func main() {
 
 	lg.Info("starting expire share", slog.String("environment", cfg.Environment))
 
-	repo, err := mysql.NewFileRepo(cfg.ConnectionString)
+	db, err := mysql.Connect(cfg.ConnectionString)
 	if err != nil {
-		lg.Error("failed to initialize repository:", sl.Error(err))
+		lg.Error("failed to connect to database:", sl.Error(err))
 		os.Exit(1)
 	}
 
+	fileRepo := mysql.NewFileRepo(db)
+
 	defer func() {
-		err := repo.Database.Close()
+		err := fileRepo.Database.Close()
 		if err != nil {
 			lg.Error("failed to close repository:", sl.Error(err))
 		}
@@ -60,7 +62,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fileWorker := worker.NewFileWorker(repo, lg, *cfg)
+	fileWorker := worker.NewFileWorker(fileRepo, lg, *cfg)
 	go fileWorker.Start(ctx)
 
 	lg.Info("file worker was started")
@@ -73,7 +75,7 @@ func main() {
 	router.Use(middleware.URLFormat)
 	router.Use(myMiddleware.NewLogger(lg))
 
-	fileService := services.NewFileService(repo, lg, *cfg)
+	fileService := services.NewFileService(fileRepo, lg, *cfg)
 
 	if cfg.Environment == config.EnvironmentLocal {
 		router.Get("/swagger/*", httpSwagger.Handler(

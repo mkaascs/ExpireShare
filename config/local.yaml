@@ -13,3 +13,4 @@ service:
   default_max_downloads: 1
   alias_length: 6
   file_worker_delay: 5m
+  max_file_uploads_per_ip: 5
