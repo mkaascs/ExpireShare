@@ -8,15 +8,15 @@ import (
 	"context"
 	"errors"
 	"expire-share/internal/config"
+	"expire-share/internal/delivery/http/api/files/get"
+	"expire-share/internal/delivery/http/api/files/remove"
+	"expire-share/internal/delivery/http/api/upload"
 	"expire-share/internal/delivery/http/download"
-	"expire-share/internal/delivery/http/file/get"
-	"expire-share/internal/delivery/http/file/remove"
-	"expire-share/internal/delivery/http/upload"
 	myMiddleware "expire-share/internal/delivery/middlewares"
 	pkgLog "expire-share/internal/lib/log"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/repository/mysql"
-	"expire-share/internal/repository/mysql/files"
+	"expire-share/internal/services/files"
 	"expire-share/internal/services/worker"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -83,10 +83,11 @@ func main() {
 		))
 	}
 
-	router.Post("/upload", upload.New(fileService, lg, *cfg))
 	router.Get("/download/{alias}", download.New(fileService, lg))
-	router.Get("/file/{alias}", get.New(fileService, lg))
-	router.Delete("/file/{alias}", remove.New(fileService, lg))
+
+	router.Post("/api/upload", upload.New(fileService, lg, *cfg))
+	router.Get("/api/file/{alias}", get.New(fileService, lg))
+	router.Delete("/api/file/{alias}", remove.New(fileService, lg))
 
 	lg.Info("starting expire share server", slog.String("address", cfg.HttpServer.Address))
 

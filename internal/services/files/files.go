@@ -21,7 +21,6 @@ var (
 
 type Service struct {
 	fileRepo interfaces.FileRepo
-	userRepo interfaces.UserRepo
 	cfg      config.Config
 	log      *slog.Logger
 }
@@ -59,9 +58,8 @@ func (fs *Service) checkPassword(fileInfo domain.File, password string) error {
 	return nil
 }
 
-func NewFileService(fileRepo interfaces.FileRepo, userRepo interfaces.UserRepo, log *slog.Logger, cfg config.Config) *Service {
+func NewFileService(fileRepo interfaces.FileRepo, log *slog.Logger, cfg config.Config) *Service {
 	return &Service{fileRepo: fileRepo,
-		userRepo: userRepo,
-		log:      log,
-		cfg:      cfg}
+		log: log,
+		cfg: cfg}
 }
