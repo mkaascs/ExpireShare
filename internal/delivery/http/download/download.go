@@ -47,14 +47,6 @@ func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc 
 			slog.String("request_id", middleware.GetReqID(r.Context())))
 
 		alias := chi.URLParam(r, "alias")
-		fmt.Println(alias)
-		if alias == "" {
-			log.Info("no alias provided")
-			response.RenderError(w, r,
-				http.StatusBadRequest,
-				"no alias provided")
-			return
-		}
 
 		var request Request
 		err := render.DecodeJSON(r.Body, &request)
@@ -71,28 +63,12 @@ func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc 
 		ctx := r.Context()
 		file, err := fileService.DownloadFile(ctx, command)
 		if err != nil {
-			if errors.Is(err, file.ErrAliasNotFound) {
-				log.Info("file with current alias not found", slog.String("alias", alias))
-				response.RenderError(w, r,
-					http.StatusNotFound, "file with current alias not found")
+			if response.RenderFileServiceError(w, r, err) {
+				log.Info("failed to get file info", sl.Error(err), slog.String("alias", alias))
 				return
 			}
 
-			if errors.Is(err, file.ErrPasswordRequired) {
-				log.Info("password is required", slog.String("alias", alias))
-				response.RenderError(w, r,
-					http.StatusUnauthorized, "password is required")
-				return
-			}
-
-			if errors.Is(err, file.ErrIncorrectPassword) {
-				log.Info("incorrect password", slog.String("alias", alias))
-				response.RenderError(w, r,
-					http.StatusForbidden, "incorrect password")
-				return
-			}
-
-			log.Error("failed to get file", sl.Error(err))
+			log.Error("failed to get file info", sl.Error(err), slog.String("alias", alias))
 			response.RenderError(w, r,
 				http.StatusInternalServerError,
 				"failed to get file")

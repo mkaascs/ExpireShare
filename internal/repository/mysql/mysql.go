@@ -9,15 +9,6 @@ const (
 	duplicateEntryErrCode = 1062
 )
 
-func stmtClose(stmt *sql.Stmt, err *error) {
-	if *err != nil {
-		_ = stmt.Close()
-		return
-	}
-
-	*err = stmt.Close()
-}
-
 func Connect(connectionString string) (*sql.DB, error) {
 	const fn = "repository.mysql.Connect"
 
@@ -31,4 +22,13 @@ func Connect(connectionString string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func stmtClose(stmt *sql.Stmt, err *error) {
+	if *err != nil {
+		_ = stmt.Close()
+		return
+	}
+
+	*err = stmt.Close()
 }

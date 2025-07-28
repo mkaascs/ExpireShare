@@ -16,7 +16,7 @@ import (
 	pkgLog "expire-share/internal/lib/log"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/repository/mysql"
-	"expire-share/internal/services/file"
+	"expire-share/internal/repository/mysql/files"
 	"expire-share/internal/services/worker"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -75,7 +75,7 @@ func main() {
 	router.Use(middleware.URLFormat)
 	router.Use(myMiddleware.NewLogger(lg))
 
-	fileService := file.NewFileService(fileRepo, lg, *cfg)
+	fileService := files.NewFileService(fileRepo, lg, *cfg)
 
 	if cfg.Environment == config.EnvironmentLocal {
 		router.Get("/swagger/*", httpSwagger.Handler(

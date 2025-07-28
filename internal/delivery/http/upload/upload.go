@@ -8,7 +8,6 @@ import (
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto"
-	"fmt"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
@@ -118,11 +117,8 @@ func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config
 		})
 
 		if err != nil {
-			if errors.Is(err, file.ErrFileSizeTooBig) {
-				log.Error("file is too big", sl.Error(err))
-				response.RenderError(w, r,
-					http.StatusUnprocessableEntity,
-					fmt.Sprintf("file size is very big. it must be less than %s", cfg.MaxFileSize))
+			if response.RenderFileServiceError(w, r, err) {
+				log.Error("failed to upload file", sl.Error(err))
 				return
 			}
 
