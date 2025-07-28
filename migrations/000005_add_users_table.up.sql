@@ -1,5 +1,0 @@
--- Create user table in database
-CREATE TABLE IF NOT EXISTS users(
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    ip VARCHAR(50) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -20,7 +20,7 @@ func main() {
 			return mgr.Up()
 		},
 		"down": func(mgr *migrate.Migrate) error {
-			return mgr.Down()
+			return mgr.Steps(-1)
 		},
 	}
 
