@@ -10,6 +10,7 @@ type AddFileCommand struct {
 	TTL          time.Duration
 }
 
-type AddUserCommand struct {
-	IP string
+type SaveTokenCommand struct {
+	UserId           int64
+	RefreshTokenHash string
 }

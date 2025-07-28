@@ -18,7 +18,7 @@ type FileRepo struct {
 }
 
 func (fr *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ int64, err error) {
-	const fn = "repository.mysql.AddFile"
+	const fn = "repository.mysql.FileRepo.AddFile"
 
 	stmt, err := fr.Database.PrepareContext(ctx, `INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at, password_hash) VALUES(?, ?, ?, ?, ?, ?)`)
 	if err != nil {
@@ -54,7 +54,7 @@ func (fr *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ 
 }
 
 func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.File, error) {
-	const fn = "repository.mysql.GetFileByAlias"
+	const fn = "repository.mysql.FileRepo.GetFileByAlias"
 
 	stmt, err := fr.Database.PrepareContext(ctx, `SELECT file_path, alias, downloads_left, loaded_at, expires_at, password_hash FROM files WHERE alias = ? AND expires_at > NOW()`)
 	if err != nil {
@@ -84,7 +84,7 @@ func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.Fi
 }
 
 func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string) (int16, error) {
-	const fn = "repository.mysql.DecrementDownloadsByAlias"
+	const fn = "repository.mysql.FileRepo.DecrementDownloadsByAlias"
 
 	tx, err := fr.Database.BeginTx(ctx, nil)
 	if err != nil {
@@ -143,7 +143,7 @@ func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string)
 }
 
 func (fr *FileRepo) DeleteFile(ctx context.Context, alias string) (err error) {
-	const fn = "repository.mysql.DeleteFile"
+	const fn = "repository.mysql.FileRepo.DeleteFile"
 
 	stmt, err := fr.Database.PrepareContext(ctx, "DELETE FROM files WHERE alias = ? AND expires_at > NOW()")
 	if err != nil {
@@ -170,7 +170,7 @@ func (fr *FileRepo) DeleteFile(ctx context.Context, alias string) (err error) {
 }
 
 func (fr *FileRepo) DeleteExpiredFiles(ctx context.Context) (_ []string, err error) {
-	const fn = "repository.mysql.DeleteExpiredFiles"
+	const fn = "repository.mysql.FileRepo.DeleteExpiredFiles"
 	tx, err := fr.Database.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", fn, err)
