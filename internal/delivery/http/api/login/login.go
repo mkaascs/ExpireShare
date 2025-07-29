@@ -1,9 +1,9 @@
 package login
 
 import (
-	"expire-share/internal/config"
-	"expire-share/internal/delivery/interfaces"
+	"context"
 	"expire-share/internal/delivery/middlewares"
+	"expire-share/internal/domain"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto"
@@ -24,7 +24,11 @@ type Response struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-func New(userService interfaces.UserService, log *slog.Logger, cfg config.Config) http.HandlerFunc {
+type UserLogin interface {
+	Login(ctx context.Context, command dto.LoginCommand) (*domain.TokenPair, error)
+}
+
+func New(login UserLogin, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.api.login.New"
 		log = slog.With(
@@ -35,7 +39,7 @@ func New(userService interfaces.UserService, log *slog.Logger, cfg config.Config
 		request, _ = middlewares.GetParsedBodyRequest[Request](r)
 
 		ctx := r.Context()
-		tokens, err := userService.Login(ctx, dto.LoginCommand{
+		tokens, err := login.Login(ctx, dto.LoginCommand{
 			Login:    request.Login,
 			Password: request.Password,
 		})

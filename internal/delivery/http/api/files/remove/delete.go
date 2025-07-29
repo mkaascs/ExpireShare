@@ -1,7 +1,7 @@
 package remove
 
 import (
-	"expire-share/internal/delivery/interfaces"
+	"context"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto"
@@ -20,6 +20,10 @@ type Response struct {
 	response.Response
 }
 
+type FileDeleter interface {
+	DeleteFile(ctx context.Context, command dto.DeleteFileCommand) error
+}
+
 // New @Summary Delete file
 // @Description Deletes uploaded file by its alias
 // @Tags file
@@ -33,7 +37,7 @@ type Response struct {
 // @Failure 404 {object} Response
 // @Failure 500 {object} Response
 // @Router /file [delete]
-func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc {
+func New(deleter FileDeleter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.file.api.delete.New"
 		log = slog.With(
@@ -49,13 +53,12 @@ func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc 
 			request.Password = ""
 		}
 
-		command := dto.DeleteFileCommand{
+		ctx := r.Context()
+		err = deleter.DeleteFile(ctx, dto.DeleteFileCommand{
 			Alias:    alias,
 			Password: request.Password,
-		}
+		})
 
-		ctx := r.Context()
-		err = fileService.DeleteFile(ctx, command)
 		if err != nil {
 			if response.RenderFileServiceError(w, r, err) {
 				log.Info("failed to delete file info", sl.Error(err), slog.String("alias", alias))

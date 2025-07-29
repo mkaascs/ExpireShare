@@ -1,10 +1,10 @@
 package upload
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"expire-share/internal/config"
-	"expire-share/internal/delivery/interfaces"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto"
@@ -28,6 +28,10 @@ type Response struct {
 	Alias string `json:"alias,omitempty"`
 }
 
+type FileUploader interface {
+	UploadFile(ctx context.Context, command dto.UploadFileCommand) (string, error)
+}
+
 var validate *validator.Validate
 
 // New @Summary Upload file
@@ -41,7 +45,7 @@ var validate *validator.Validate
 // @Failure 422 {object} Response
 // @Failure 500 {object} Response
 // @Router /upload [post]
-func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config) http.HandlerFunc {
+func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.HandlerFunc {
 	validate = validator.New()
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.upload.api.New"
@@ -107,7 +111,7 @@ func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config
 		}(file)
 
 		ctx := r.Context()
-		alias, err := fileService.UploadFile(ctx, dto.UploadFileCommand{
+		alias, err := uploader.UploadFile(ctx, dto.UploadFileCommand{
 			File:         file,
 			FileSize:     header.Size,
 			Filename:     header.Filename,

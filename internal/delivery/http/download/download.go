@@ -1,8 +1,8 @@
 package download
 
 import (
+	"context"
 	"errors"
-	"expire-share/internal/delivery/interfaces"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto"
@@ -26,6 +26,10 @@ type Response struct {
 	response.Response
 }
 
+type FileDownloader interface {
+	DownloadFile(ctx context.Context, command dto.DownloadFileCommand) (*dto.DownloadFileResult, error)
+}
+
 // New @Summary Download file
 // @Description Downloads uploaded file by its alias
 // @Tags file
@@ -39,7 +43,7 @@ type Response struct {
 // @Failure 404 {object} Response
 // @Failure 500 {object} Response
 // @Router /download [get]
-func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc {
+func New(downloader FileDownloader, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.download.New"
 		log = slog.With(
@@ -61,7 +65,7 @@ func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc 
 		}
 
 		ctx := r.Context()
-		file, err := fileService.DownloadFile(ctx, command)
+		file, err := downloader.DownloadFile(ctx, command)
 		if err != nil {
 			if response.RenderFileServiceError(w, r, err) {
 				log.Info("failed to get file info", sl.Error(err), slog.String("alias", alias))

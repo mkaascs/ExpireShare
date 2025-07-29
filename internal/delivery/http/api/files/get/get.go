@@ -1,7 +1,7 @@
 package get
 
 import (
-	"expire-share/internal/delivery/interfaces"
+	"context"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto"
@@ -23,6 +23,10 @@ type Response struct {
 	ExpiresIn     string `json:"expires_in"`
 }
 
+type FileGetter interface {
+	GetFileByAlias(ctx context.Context, command dto.GetFileCommand) (*dto.GetFileResult, error)
+}
+
 // New @Summary Get file info
 // @Description Get info about uploaded file by its alias
 // @Tags file
@@ -36,7 +40,7 @@ type Response struct {
 // @Failure 404 {object} Response
 // @Failure 500 {object} Response
 // @Router /file [get]
-func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc {
+func New(getter FileGetter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.file.api.get.New"
 		log = slog.With(
@@ -52,13 +56,12 @@ func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc 
 			request.Password = ""
 		}
 
-		command := dto.GetFileCommand{
+		ctx := r.Context()
+		file, err := getter.GetFileByAlias(ctx, dto.GetFileCommand{
 			Alias:    alias,
 			Password: request.Password,
-		}
+		})
 
-		ctx := r.Context()
-		file, err := fileService.GetFileByAlias(ctx, command)
 		if err != nil {
 			if response.RenderFileServiceError(w, r, err) {
 				log.Info("failed to get file info", sl.Error(err), slog.String("alias", alias))
