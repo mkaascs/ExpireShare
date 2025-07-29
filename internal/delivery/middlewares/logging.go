@@ -12,7 +12,7 @@ func NewLogger(log *slog.Logger) func(http.Handler) http.Handler {
 		log = log.With(slog.String("component", "middleware/logger"))
 		log.Info("logger middleware enabled")
 
-		fn := func(w http.ResponseWriter, r *http.Request) {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			entry := log.With(
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),
@@ -32,8 +32,6 @@ func NewLogger(log *slog.Logger) func(http.Handler) http.Handler {
 			}()
 
 			next.ServeHTTP(wrw, r)
-		}
-
-		return http.HandlerFunc(fn)
+		})
 	}
 }
