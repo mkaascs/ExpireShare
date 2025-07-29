@@ -35,7 +35,7 @@ type Response struct {
 // @Router /file [delete]
 func New(fileService interfaces.FileService, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const fn = "http.file.delete.New"
+		const fn = "http.file.api.delete.New"
 		log = slog.With(
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))

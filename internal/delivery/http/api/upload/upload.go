@@ -44,7 +44,7 @@ var validate *validator.Validate
 func New(fileService interfaces.FileService, log *slog.Logger, cfg config.Config) http.HandlerFunc {
 	validate = validator.New()
 	return func(w http.ResponseWriter, r *http.Request) {
-		const fn = "http.upload.New"
+		const fn = "http.upload.api.New"
 		log = slog.With(
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
