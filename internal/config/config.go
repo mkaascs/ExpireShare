@@ -23,6 +23,7 @@ type Config struct {
 	Storage          `yaml:"storage"`
 	HttpServer       `yaml:"http_server"`
 	Service          `yaml:"service"`
+	Auth             `yaml:"auth"`
 }
 
 type Storage struct {
@@ -44,6 +45,11 @@ type Service struct {
 	AliasLength         int16         `yaml:"alias_length" default:"6"`
 	FileWorkerDelay     time.Duration `yaml:"file_worker_delay" default:"5m"`
 	MaxFileUploadsPerIP int16         `yaml:"max_file_uploads_per_ip" default:"5"`
+}
+
+type Auth struct {
+	AccessTokenTtl  time.Duration `yaml:"access_token_ttl" default:"30m"`
+	RefreshTokenTtl time.Duration `yaml:"refresh_token_ttl" default:"30d"`
 }
 
 func MustLoad(envPath string) *Config {
