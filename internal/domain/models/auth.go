@@ -1,8 +1,11 @@
-package domain
+package models
+
+import "time"
 
 type Token struct {
 	UserId       int64
 	RefreshToken string
+	ExpiresAt    time.Time
 }
 
 type TokenPair struct {

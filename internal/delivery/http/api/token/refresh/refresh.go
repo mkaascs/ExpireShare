@@ -3,7 +3,7 @@ package refresh
 import (
 	"context"
 	"expire-share/internal/delivery/middlewares"
-	"expire-share/internal/domain"
+	"expire-share/internal/domain/models"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"github.com/go-chi/chi/middleware"
@@ -23,7 +23,7 @@ type Response struct {
 }
 
 type TokenRefresher interface {
-	RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*models.TokenPair, error)
 }
 
 func New(refresher TokenRefresher, log *slog.Logger) http.HandlerFunc {
