@@ -4,7 +4,7 @@ import (
 	"context"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services/dto"
+	"expire-share/internal/services/dto/commands"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
@@ -21,7 +21,7 @@ type Response struct {
 }
 
 type FileDeleter interface {
-	DeleteFile(ctx context.Context, command dto.DeleteFileCommand) error
+	DeleteFile(ctx context.Context, command commands.DeleteFileCommand) error
 }
 
 // New @Summary Delete file
@@ -54,7 +54,7 @@ func New(deleter FileDeleter, log *slog.Logger) http.HandlerFunc {
 		}
 
 		ctx := r.Context()
-		err = deleter.DeleteFile(ctx, dto.DeleteFileCommand{
+		err = deleter.DeleteFile(ctx, commands.DeleteFileCommand{
 			Alias:    alias,
 			Password: request.Password,
 		})

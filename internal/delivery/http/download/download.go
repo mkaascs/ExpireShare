@@ -5,7 +5,8 @@ import (
 	"errors"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services/dto"
+	"expire-share/internal/services/dto/commands"
+	"expire-share/internal/services/dto/results"
 	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -27,7 +28,7 @@ type Response struct {
 }
 
 type FileDownloader interface {
-	DownloadFile(ctx context.Context, command dto.DownloadFileCommand) (*dto.DownloadFileResult, error)
+	DownloadFile(ctx context.Context, command commands.DownloadFileCommand) (*results.DownloadFileResult, error)
 }
 
 // New @Summary Download file
@@ -59,7 +60,7 @@ func New(downloader FileDownloader, log *slog.Logger) http.HandlerFunc {
 			request.Password = ""
 		}
 
-		command := dto.DownloadFileCommand{
+		command := commands.DownloadFileCommand{
 			Alias:    alias,
 			Password: request.Password,
 		}

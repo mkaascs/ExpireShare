@@ -6,7 +6,7 @@ import (
 	"expire-share/internal/domain/models"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services/dto"
+	"expire-share/internal/services/dto/commands"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"log/slog"
@@ -25,7 +25,7 @@ type Response struct {
 }
 
 type UserLogin interface {
-	Login(ctx context.Context, command dto.LoginCommand) (*models.TokenPair, error)
+	Login(ctx context.Context, command commands.LoginCommand) (*models.TokenPair, error)
 }
 
 func New(login UserLogin, log *slog.Logger) http.HandlerFunc {
@@ -39,7 +39,7 @@ func New(login UserLogin, log *slog.Logger) http.HandlerFunc {
 		request, _ = middlewares.GetParsedBodyRequest[Request](r)
 
 		ctx := r.Context()
-		tokens, err := login.Login(ctx, dto.LoginCommand{
+		tokens, err := login.Login(ctx, commands.LoginCommand{
 			Login:    request.Login,
 			Password: request.Password,
 		})

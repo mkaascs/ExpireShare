@@ -1,4 +1,4 @@
-package dto
+package repository
 
 import "time"
 
@@ -13,4 +13,10 @@ type AddFileCommand struct {
 type SaveTokenCommand struct {
 	UserId           int64
 	RefreshTokenHash string
+	ExpiresAt        time.Time
+}
+
+type CheckUserCommand struct {
+	Login        string
+	PasswordHash string
 }

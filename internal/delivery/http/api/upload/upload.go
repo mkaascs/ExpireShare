@@ -7,7 +7,7 @@ import (
 	"expire-share/internal/config"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services/dto"
+	"expire-share/internal/services/dto/commands"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
@@ -29,7 +29,7 @@ type Response struct {
 }
 
 type FileUploader interface {
-	UploadFile(ctx context.Context, command dto.UploadFileCommand) (string, error)
+	UploadFile(ctx context.Context, command commands.UploadFileCommand) (string, error)
 }
 
 var validate *validator.Validate
@@ -111,7 +111,7 @@ func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.Handle
 		}(file)
 
 		ctx := r.Context()
-		alias, err := uploader.UploadFile(ctx, dto.UploadFileCommand{
+		alias, err := uploader.UploadFile(ctx, commands.UploadFileCommand{
 			File:         file,
 			FileSize:     header.Size,
 			Filename:     header.Filename,

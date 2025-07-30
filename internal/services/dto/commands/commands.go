@@ -1,4 +1,4 @@
-package dto
+package commands
 
 import (
 	"io"
@@ -26,5 +26,10 @@ type GetFileCommand struct {
 
 type DeleteFileCommand struct {
 	Alias    string
+	Password string
+}
+
+type LoginCommand struct {
+	Login    string
 	Password string
 }

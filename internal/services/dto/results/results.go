@@ -1,4 +1,4 @@
-package dto
+package results
 
 import (
 	"io"

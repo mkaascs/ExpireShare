@@ -4,7 +4,8 @@ import (
 	"context"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services/dto"
+	"expire-share/internal/services/dto/commands"
+	"expire-share/internal/services/dto/results"
 	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -24,7 +25,7 @@ type Response struct {
 }
 
 type FileGetter interface {
-	GetFileByAlias(ctx context.Context, command dto.GetFileCommand) (*dto.GetFileResult, error)
+	GetFileByAlias(ctx context.Context, command commands.GetFileCommand) (*results.GetFileResult, error)
 }
 
 // New @Summary Get file info
@@ -57,7 +58,7 @@ func New(getter FileGetter, log *slog.Logger) http.HandlerFunc {
 		}
 
 		ctx := r.Context()
-		file, err := getter.GetFileByAlias(ctx, dto.GetFileCommand{
+		file, err := getter.GetFileByAlias(ctx, commands.GetFileCommand{
 			Alias:    alias,
 			Password: request.Password,
 		})
