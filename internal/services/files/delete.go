@@ -3,17 +3,18 @@ package files
 import (
 	"context"
 	"errors"
+	"expire-share/internal/domain/errors/repository"
+	"expire-share/internal/domain/errors/services/files"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/repository"
-	"expire-share/internal/services/dto"
+	"expire-share/internal/services/dto/commands"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 )
 
-func (fs *Service) DeleteFile(ctx context.Context, command dto.DeleteFileCommand) error {
-	const fn = "services.FileService.DeleteFile"
+func (fs *Service) DeleteFile(ctx context.Context, command commands.DeleteFileCommand) error {
+	const fn = "services.files.Service.DeleteFile"
 	fs.log = slog.With(slog.String("fn", fn))
 
 	err := fs.checkPasswordByAlias(ctx, command.Alias, command.Password)
@@ -26,7 +27,7 @@ func (fs *Service) DeleteFile(ctx context.Context, command dto.DeleteFileCommand
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
 			fs.log.Info("failed to delete file info", sl.Error(err))
-			return ErrAliasNotFound
+			return files.ErrAliasNotFound
 		}
 
 		fs.log.Error("failed to delete file info", sl.Error(err))

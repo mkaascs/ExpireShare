@@ -3,24 +3,26 @@ package files
 import (
 	"context"
 	"errors"
+	"expire-share/internal/domain/errors/repository"
+	"expire-share/internal/domain/errors/services/files"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/repository"
-	"expire-share/internal/services/dto"
+	"expire-share/internal/services/dto/commands"
+	"expire-share/internal/services/dto/results"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 )
 
-func (fs *Service) DownloadFile(ctx context.Context, command dto.DownloadFileCommand) (*dto.DownloadFileResult, error) {
-	const fn = "services.FileService.DownloadFile"
+func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFileCommand) (*results.DownloadFileResult, error) {
+	const fn = "services.files.Service.DownloadFile"
 	fs.log = slog.With(slog.String("fn", fn))
 
 	fileInfo, err := fs.fileRepo.GetFileByAlias(ctx, command.Alias)
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
 			fs.log.Info("failed to get file info", sl.Error(err))
-			return nil, ErrAliasNotFound
+			return nil, files.ErrAliasNotFound
 		}
 
 		fs.log.Error("failed to get file info", sl.Error(err))
@@ -37,7 +39,7 @@ func (fs *Service) DownloadFile(ctx context.Context, command dto.DownloadFileCom
 	if err != nil {
 		if errors.Is(err, repository.ErrAliasNotFound) {
 			fs.log.Info("failed decrement downloads left", sl.Error(err))
-			return nil, ErrAliasNotFound
+			return nil, files.ErrAliasNotFound
 		}
 
 		fs.log.Error("failed to decrement downloads left", sl.Error(err))
@@ -69,7 +71,7 @@ func (fs *Service) DownloadFile(ctx context.Context, command dto.DownloadFileCom
 	}
 
 	if downloadsLeft > 0 {
-		res := dto.DownloadFileResult{
+		res := results.DownloadFileResult{
 			File:     file,
 			FileInfo: stat,
 			Close:    closeFunc,
@@ -99,7 +101,7 @@ func (fs *Service) DownloadFile(ctx context.Context, command dto.DownloadFileCom
 		return nil
 	}
 
-	res := dto.DownloadFileResult{
+	res := results.DownloadFileResult{
 		File:     file,
 		FileInfo: stat,
 		Close:    closeAndDeleteFunc,

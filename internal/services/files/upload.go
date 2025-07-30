@@ -2,10 +2,12 @@ package files
 
 import (
 	"context"
+	"expire-share/internal/domain/errors/services/files"
 	"expire-share/internal/lib/alias"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/lib/sizes"
-	"expire-share/internal/services/dto"
+	"expire-share/internal/services/dto/commands"
+	"expire-share/internal/services/dto/repository"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"io"
@@ -14,15 +16,15 @@ import (
 	"path/filepath"
 )
 
-func (fs *Service) UploadFile(ctx context.Context, command dto.UploadFileCommand) (_ string, err error) {
-	const fn = "services.FileService.UploadFile"
+func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFileCommand) (_ string, err error) {
+	const fn = "services.file.Service.UploadFile"
 	fs.log = slog.With(slog.String("fn", fn))
 
 	if command.FileSize > fs.cfg.MaxFileSizeInBytes {
 		fs.log.Info("file size too big",
 			slog.String("file_size", sizes.ToFormattedString(command.FileSize)),
 			slog.String("max_file_size", fs.cfg.MaxFileSize))
-		return "", fmt.Errorf("%s: %w - max file size %s", fn, ErrFileSizeTooBig, fs.cfg.MaxFileSize)
+		return "", fmt.Errorf("%s: %w - max file size %s", fn, files.ErrFileSizeTooBig, fs.cfg.MaxFileSize)
 	}
 
 	newAlias := alias.Gen(fs.cfg.AliasLength)
@@ -64,7 +66,7 @@ func (fs *Service) UploadFile(ctx context.Context, command dto.UploadFileCommand
 		}
 	}
 
-	addFileCommand := dto.AddFileCommand{
+	addFileCommand := repository.AddFileCommand{
 		FilePath:     filepath.Join(newAlias, command.Filename),
 		Alias:        newAlias,
 		MaxDownloads: command.MaxDownloads,
