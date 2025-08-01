@@ -8,4 +8,5 @@ var (
 	ErrNoDownloadsLeft = errors.New("there is no downloads left")
 	ErrTokenExists     = errors.New("token with this user id already exists")
 	ErrTokenNotFound   = errors.New("token does not exist")
+	ErrUserNotFound    = errors.New("user not found")
 )
