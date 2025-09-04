@@ -50,6 +50,7 @@ type Service struct {
 type Auth struct {
 	AccessTokenTtl  time.Duration `yaml:"access_token_ttl" default:"30m"`
 	RefreshTokenTtl time.Duration `yaml:"refresh_token_ttl" default:"30d"`
+	Issuer          string        `yaml:"issuer" required:"true"`
 }
 
 func MustLoad(envPath string) *Config {

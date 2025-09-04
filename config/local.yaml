@@ -2,7 +2,7 @@ environment: "local" # prod, local, dev
 connection_string: "root:makas1506@tcp(127.0.0.1:3306)/ExpireShare?charset=utf8&parseTime=True"
 storage:
   type: "local"
-  path: "./config/"
+  path: "./storage/"
   max_file_size: "500mb"
 http_server:
   address: "localhost:6010"
@@ -14,3 +14,7 @@ service:
   alias_length: 6
   file_worker_delay: 5m
   max_file_uploads_per_ip: 5
+auth:
+  access_token_ttl: 15m
+  refresh_token_ttl: 24h
+  issuer: "expire-share"
