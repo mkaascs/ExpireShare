@@ -2,7 +2,8 @@ package response
 
 import (
 	"errors"
-	"expire-share/internal/services/files"
+	"expire-share/internal/domain/errors/services/auth"
+	"expire-share/internal/domain/errors/services/files"
 	"fmt"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
@@ -72,6 +73,17 @@ func RenderFileServiceError(w http.ResponseWriter, r *http.Request, err error) b
 		RenderError(w, r,
 			http.StatusUnprocessableEntity,
 			"file size is very big")
+		return true
+	}
+
+	return false
+}
+
+func RenderUserServiceError(w http.ResponseWriter, r *http.Request, err error) bool {
+	if errors.Is(err, auth.ErrUserNotFound) {
+		RenderError(w, r,
+			http.StatusNotFound,
+			"user not found")
 		return true
 	}
 

@@ -56,7 +56,7 @@ func New(downloader FileDownloader, log *slog.Logger) http.HandlerFunc {
 		var request Request
 		err := render.DecodeJSON(r.Body, &request)
 		if err != nil {
-			log.Info("failed to decode json body", sl.Error(err))
+			log.Info("empty json body", sl.Error(err))
 			request.Password = ""
 		}
 
