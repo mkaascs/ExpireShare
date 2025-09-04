@@ -3,57 +3,71 @@ package mysql
 import (
 	"context"
 	"database/sql"
-	"expire-share/internal/services/dto"
+	"errors"
+	repositoryErr "expire-share/internal/domain/errors/repository"
+	"expire-share/internal/domain/models"
+	"expire-share/internal/services/dto/repository"
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/go-sql-driver/mysql"
 )
 
 type TokenRepo struct {
 	Database *sql.DB
 }
 
-func (tr *TokenRepo) SaveToken(ctx context.Context, command dto.SaveTokenCommand) (_ int64, err error) {
+func (tr *TokenRepo) SaveToken(ctx context.Context, command repository.SaveTokenCommand) (_ int64, err error) {
 	const fn = "repository.mysql.TokenRepo.SaveToken"
 
-	stmt, err := tr.Database.PrepareContext(ctx, `INSERT INTO tokens(user_id, refresh_token) VALUES(?, ?)`)
+	stmt, err := tr.Database.PrepareContext(ctx, `INSERT INTO files(user_id, refresh_token_hash, expires_at) VALUES (?,?,?) ON DUPLICATE KEY UPDATE refresh_token_hash = VALUES(refresh_token_hash), expires_at = VALUES(expires_at)`)
 	if err != nil {
 		return 0, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}
 
 	defer stmtClose(stmt, &err)
-	res, err := stmt.ExecContext(ctx, command.UserId, command.RefreshTokenHash)
+
+	res, err := stmt.ExecContext(ctx, command.UserId, command.RefreshTokenHash, command.ExpiresAt)
 	if err != nil {
-		return 0, fmt.Errorf("%s: failed to exec statement: %w", fn, err)
+		var mysqlErr *mysql.MySQLError
+		if errors.As(err, &mysqlErr) && mysqlErr.Number == duplicateEntryErrCode {
+			return 0, repositoryErr.ErrTokenExists
+		}
+
+		return 0, fmt.Errorf("%s: failed to save token: %w", fn, err)
 	}
 
 	id, err := res.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("%s: failed to get last insert id: %w", fn, err)
+		return 0, fmt.Errorf("%s: failed to get token id: %w", fn, err)
 	}
 
 	return id, nil
 }
 
-func (tr *TokenRepo) CheckToken(ctx context.Context, refreshToken string) (bool, error) {
-	const fn = "repository.mysql.TokenRepo.CheckToken"
+func (tr *TokenRepo) GetToken(ctx context.Context, refreshTokenHash string) (_ models.Token, err error) {
+	const fn = "repository.mysql.TokenRepo.GetToken"
 
-	stmt, err := tr.Database.PrepareContext(ctx, `SELECT EXISTS(SELECT 1 FROM tokens WHERE refresh_token = ? AND expires_at > NOW())`)
+	stmt, err := tr.Database.PrepareContext(ctx, `SELECT user_id, refresh_token_hash, expires_at FROM tokens WHERE refresh_token_hash = ?`)
 	if err != nil {
-		return false, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
+		return models.Token{}, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}
 
-	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(refreshToken), bcrypt.DefaultCost)
+	defer stmtClose(stmt, &err)
+
+	var token models.Token
+	err = stmt.QueryRowContext(ctx, refreshTokenHash).Scan(
+		&token.UserId,
+		&token.Hash,
+		&token.ExpiresAt)
+
 	if err != nil {
-		return false, fmt.Errorf("%s: failed to hash refresh token: %w", fn, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.Token{}, repositoryErr.ErrTokenNotFound
+		}
+
+		return models.Token{}, fmt.Errorf("%s: failed to query row: %w", fn, err)
 	}
 
-	var exists bool
-	err = stmt.QueryRowContext(ctx, string(hashedBytes)).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("%s: failed to check token existence: %w", fn, err)
-	}
-
-	return exists, nil
+	return token, nil
 }
 
 func NewTokenRepo(db *sql.DB) *TokenRepo {

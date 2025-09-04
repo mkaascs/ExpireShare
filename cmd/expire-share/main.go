@@ -75,7 +75,7 @@ func main() {
 	router.Use(middleware.URLFormat)
 	router.Use(myMiddleware.NewLogger(lg))
 
-	fileService := files.NewFileService(fileRepo, lg, *cfg)
+	fileService := files.New(fileRepo, lg, *cfg)
 
 	if cfg.Environment == config.EnvironmentLocal {
 		router.Get("/swagger/*", httpSwagger.Handler(

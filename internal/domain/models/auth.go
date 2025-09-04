@@ -3,9 +3,9 @@ package models
 import "time"
 
 type Token struct {
-	UserId       int64
-	RefreshToken string
-	ExpiresAt    time.Time
+	UserId    int64
+	Hash      string
+	ExpiresAt time.Time
 }
 
 type TokenPair struct {

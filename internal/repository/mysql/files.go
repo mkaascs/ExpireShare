@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"expire-share/internal/domain"
-	"expire-share/internal/repository"
-	"expire-share/internal/services/dto"
+	repositoryErr "expire-share/internal/domain/errors/repository"
+	"expire-share/internal/domain/models"
+	"expire-share/internal/services/dto/repository"
 	"fmt"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
@@ -17,7 +17,7 @@ type FileRepo struct {
 	Database *sql.DB
 }
 
-func (fr *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ int64, err error) {
+func (fr *FileRepo) AddFile(ctx context.Context, command repository.AddFileCommand) (_ int64, err error) {
 	const fn = "repository.mysql.FileRepo.AddFile"
 
 	stmt, err := fr.Database.PrepareContext(ctx, `INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at, password_hash) VALUES(?, ?, ?, ?, ?, ?)`)
@@ -39,7 +39,7 @@ func (fr *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ 
 	if err != nil {
 		var mysqlErr *mysql.MySQLError
 		if errors.As(err, &mysqlErr) && mysqlErr.Number == duplicateEntryErrCode {
-			return 0, fmt.Errorf("%s: failed to exec statement: %w", fn, repository.ErrAliasExists)
+			return 0, repositoryErr.ErrAliasExists
 		}
 
 		return 0, fmt.Errorf("%s: failed to exec statement: %w", fn, err)
@@ -53,17 +53,17 @@ func (fr *FileRepo) AddFile(ctx context.Context, command dto.AddFileCommand) (_ 
 	return id, nil
 }
 
-func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.File, error) {
+func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (models.File, error) {
 	const fn = "repository.mysql.FileRepo.GetFileByAlias"
 
 	stmt, err := fr.Database.PrepareContext(ctx, `SELECT file_path, alias, downloads_left, loaded_at, expires_at, password_hash FROM files WHERE alias = ? AND expires_at > NOW()`)
 	if err != nil {
-		return domain.File{}, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
+		return models.File{}, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}
 
 	defer stmtClose(stmt, &err)
 
-	var file domain.File
+	var file models.File
 	err = stmt.QueryRowContext(ctx, alias).Scan(
 		&file.FilePath,
 		&file.Alias,
@@ -74,10 +74,10 @@ func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (domain.Fi
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.File{}, repository.ErrAliasNotFound
+			return models.File{}, repositoryErr.ErrAliasNotFound
 		}
 
-		return domain.File{}, fmt.Errorf("%s: failed to query statement: %w", fn, err)
+		return models.File{}, fmt.Errorf("%s: failed to query statement: %w", fn, err)
 	}
 
 	return file, nil
@@ -114,7 +114,7 @@ func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string)
 	}
 
 	if downloadsLeft == 0 {
-		return 0, repository.ErrNoDownloadsLeft
+		return 0, repositoryErr.ErrNoDownloadsLeft
 	}
 
 	downloadsLeft--
@@ -136,7 +136,7 @@ func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string)
 	}
 
 	if rowsAffected == 0 {
-		return 0, repository.ErrAliasNotFound
+		return 0, repositoryErr.ErrAliasNotFound
 	}
 
 	return downloadsLeft, nil
@@ -163,7 +163,7 @@ func (fr *FileRepo) DeleteFile(ctx context.Context, alias string) (err error) {
 	}
 
 	if rowsAffected == 0 {
-		return repository.ErrAliasNotFound
+		return repositoryErr.ErrAliasNotFound
 	}
 
 	return nil
