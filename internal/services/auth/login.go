@@ -43,6 +43,11 @@ func (as *Service) Login(ctx context.Context, command commands.LoginCommand) (*m
 	}
 
 	hashedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(tokens.RefreshToken), bcrypt.DefaultCost)
+	if err != nil {
+		as.log.Error("failed to hash refresh token", sl.Error(err))
+		return nil, fmt.Errorf("%s: failed to hash refresh token: %w", fn, err)
+	}
+
 	err = as.tokenRepo.SaveToken(ctx, dto.SaveTokenCommand{
 		RefreshTokenHash: string(hashedRefreshToken),
 		ExpiresAt:        time.Now().Add(as.cfg.RefreshTokenTtl),
