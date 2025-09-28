@@ -12,10 +12,6 @@ import (
 	"net/http"
 )
 
-type Request struct {
-	Password string `json:"password,omitempty" example:"1234"`
-}
-
 type Response struct {
 	response.Response
 }
@@ -29,7 +25,6 @@ type FileDeleter interface {
 // @Tags file
 // @Accept json
 // @Produce json
-// @Param request body Request true "File data"
 // @Success 204
 // @Failure 400 {object} Response
 // @Failure 401 {object} Response
@@ -46,17 +41,12 @@ func New(deleter FileDeleter, log *slog.Logger) http.HandlerFunc {
 
 		alias := chi.URLParam(r, "alias")
 
-		var request Request
-		err := render.DecodeJSON(r.Body, &request)
-		if err != nil {
-			log.Info("failed to decode json body", sl.Error(err))
-			request.Password = ""
-		}
+		password := r.Header.Get("X-Resource-Password")
 
 		ctx := r.Context()
-		err = deleter.DeleteFile(ctx, commands.DeleteFileCommand{
+		err := deleter.DeleteFile(ctx, commands.DeleteFileCommand{
 			Alias:    alias,
-			Password: request.Password,
+			Password: password,
 		})
 
 		if err != nil {

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/render"
 	"io"
 	"log/slog"
 	"mime"
@@ -18,10 +17,6 @@ import (
 	"path/filepath"
 	"syscall"
 )
-
-type Request struct {
-	Password string `json:"password,omitempty" example:"1234"`
-}
 
 type Response struct {
 	response.Response
@@ -53,16 +48,11 @@ func New(downloader FileDownloader, log *slog.Logger) http.HandlerFunc {
 
 		alias := chi.URLParam(r, "alias")
 
-		var request Request
-		err := render.DecodeJSON(r.Body, &request)
-		if err != nil {
-			log.Info("empty json body", sl.Error(err))
-			request.Password = ""
-		}
+		password := r.Header.Get("X-Resource-Password")
 
 		command := commands.DownloadFileCommand{
 			Alias:    alias,
-			Password: request.Password,
+			Password: password,
 		}
 
 		ctx := r.Context()
