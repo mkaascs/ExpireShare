@@ -9,15 +9,13 @@ import (
 	"net/http"
 )
 
-var validate *validator.Validate
-
-func NewValidator(log *slog.Logger) func(http.Handler) http.Handler {
+func NewValidator[T any](log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		validate = validator.New()
+		validate := validator.New()
 		log = log.With(slog.String("component", "middleware/validating"))
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			request, ok := GetParsedBodyRequest[interface{}](r)
+			request, ok := GetParsedBodyRequest[T](r)
 			if !ok {
 				log.Error("failed to get parsed body request. try execute NewBodyParser before validating")
 				response.RenderError(w, r,
