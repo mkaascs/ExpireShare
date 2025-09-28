@@ -85,9 +85,20 @@ func main() {
 
 	router.Get("/download/{alias}", download.New(fileService, lg))
 
-	router.Post("/api/upload", upload.New(fileService, lg, *cfg))
-	router.Get("/api/file/{alias}", get.New(fileService, lg))
-	router.Delete("/api/file/{alias}", remove.New(fileService, lg))
+	router.Route("/api", func(r chi.Router) {
+		r.Post("/upload", upload.New(fileService, lg, *cfg))
+
+		r.Group(func(r chi.Router) {
+			r.Use(myMiddleware.NewBodyParser(lg, myMiddleware.BodyParserSettings{
+				BodyIsOptional: true,
+			}))
+
+			r.Use(myMiddleware.NewValidator(lg))
+
+			r.Get("/file/{alias}", get.New(fileService, lg))
+			r.Delete("/file/{alias}", remove.New(fileService, lg))
+		})
+	})
 
 	lg.Info("starting expire share server", slog.String("address", cfg.HttpServer.Address))
 

@@ -5,20 +5,25 @@ import (
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"github.com/go-chi/render"
+	"io"
 	"log/slog"
 	"net/http"
 )
 
 const fieldName = "request"
 
-func NewBodyParser(log *slog.Logger) func(http.Handler) http.Handler {
+type BodyParserSettings struct {
+	BodyIsOptional bool
+}
+
+func NewBodyParser(log *slog.Logger, settings BodyParserSettings) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		log = log.With(slog.String("component", "middleware/parsing"))
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var request interface{}
 			err := render.DecodeJSON(r.Body, &request)
-			if err != nil {
+			if err != nil && (err == io.EOF && !settings.BodyIsOptional) {
 				log.Info("failed to decode json body", sl.Error(err))
 				response.RenderError(w, r,
 					http.StatusBadRequest,
