@@ -89,12 +89,6 @@ func main() {
 		r.Post("/upload", upload.New(fileService, lg, *cfg))
 
 		r.Group(func(r chi.Router) {
-			r.Use(myMiddleware.NewBodyParser(lg, myMiddleware.BodyParserSettings{
-				BodyIsOptional: true,
-			}))
-
-			r.Use(myMiddleware.NewValidator(lg))
-
 			r.Get("/file/{alias}", get.New(fileService, lg))
 			r.Delete("/file/{alias}", remove.New(fileService, lg))
 		})
