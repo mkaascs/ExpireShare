@@ -29,7 +29,7 @@ func (as *Service) saveRefreshToken(ctx context.Context, userId int64, refreshTo
 }
 
 func (as *Service) generateTokenPair(userId int64, role models.UserRole) (*models.TokenPair, error) {
-	accessJwt := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	accessJwt := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"sub":  userId,
 		"role": role,
 		"iss":  as.cfg.Issuer,

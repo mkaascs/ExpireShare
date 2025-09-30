@@ -14,8 +14,8 @@ import (
 )
 
 type Request struct {
-	Login    string `json:"login" validate:"min=3" required:"true" example:"user"`
-	Password string `json:"password" validate:"min=5" example:"expire123" required:"true"`
+	Login    string `json:"login" required:"true" validate:"min=3" example:"user"`
+	Password string `json:"password" required:"true" validate:"min=5" example:"expire123"`
 }
 
 type Response struct {

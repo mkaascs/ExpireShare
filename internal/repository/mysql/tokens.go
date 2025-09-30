@@ -18,7 +18,7 @@ type TokenRepo struct {
 func (tr *TokenRepo) SaveToken(ctx context.Context, command repository.SaveTokenCommand) (_ int64, err error) {
 	const fn = "repository.mysql.TokenRepo.SaveToken"
 
-	stmt, err := tr.Database.PrepareContext(ctx, `INSERT INTO files(user_id, refresh_token_hash, expires_at) VALUES (?,?,?) ON DUPLICATE KEY UPDATE refresh_token_hash = VALUES(refresh_token_hash), expires_at = VALUES(expires_at)`)
+	stmt, err := tr.Database.PrepareContext(ctx, `INSERT INTO tokens(user_id, refresh_token_hash, expires_at) VALUES (?,?,?) ON DUPLICATE KEY UPDATE refresh_token_hash = VALUES(refresh_token_hash), expires_at = VALUES(expires_at)`)
 	if err != nil {
 		return 0, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}

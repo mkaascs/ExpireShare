@@ -1,8 +1,7 @@
 -- Create tokens table
 CREATE TABLE IF NOT EXISTS tokens (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT UNIQUE,
+    user_id BIGINT PRIMARY KEY,
     refresh_token_hash VARCHAR(255) NOT NULL,
     expires_at TIMESTAMP NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 )

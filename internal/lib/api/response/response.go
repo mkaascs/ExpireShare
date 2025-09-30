@@ -23,12 +23,12 @@ func ValidationError(errs validator.ValidationErrors) Response {
 
 	for _, err := range errs {
 		switch err.ActualTag() {
+		case "min":
+			validationErrorsMessages = append(validationErrorsMessages, fmt.Sprintf("%s must be greater or equal than %s", err.Field(), err.Param()))
 		case "required":
 			validationErrorsMessages = append(validationErrorsMessages, fmt.Sprintf("%s is required", err.Field()))
 		case "url":
 			validationErrorsMessages = append(validationErrorsMessages, fmt.Sprintf("%s is not a URL", err.Field()))
-		case "min":
-			validationErrorsMessages = append(validationErrorsMessages, fmt.Sprintf("%s must be greater or equal than %s", err.Field(), err.Param()))
 		default:
 			validationErrorsMessages = append(validationErrorsMessages, fmt.Sprintf("%s is not a valid value", err.Field()))
 		}
@@ -80,10 +80,17 @@ func RenderFileServiceError(w http.ResponseWriter, r *http.Request, err error) b
 }
 
 func RenderUserServiceError(w http.ResponseWriter, r *http.Request, err error) bool {
-	if errors.Is(err, auth.ErrUserNotFound) {
+	if errors.Is(err, auth.ErrUserAlreadyExists) {
 		RenderError(w, r,
-			http.StatusNotFound,
-			"user not found")
+			http.StatusConflict,
+			"user with this login already exists")
+		return true
+	}
+
+	if errors.Is(err, auth.ErrInvalidPassword) || errors.Is(err, auth.ErrUserNotFound) {
+		RenderError(w, r,
+			http.StatusUnauthorized,
+			"login or password is invalid")
 		return true
 	}
 
