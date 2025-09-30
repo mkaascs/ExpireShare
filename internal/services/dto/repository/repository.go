@@ -15,3 +15,8 @@ type SaveTokenCommand struct {
 	RefreshTokenHash string
 	ExpiresAt        time.Time
 }
+
+type AddUserCommand struct {
+	Login        string
+	PasswordHash string
+}

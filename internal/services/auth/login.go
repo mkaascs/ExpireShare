@@ -8,11 +8,9 @@ import (
 	"expire-share/internal/domain/models"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto/commands"
-	dto "expire-share/internal/services/dto/repository"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"log/slog"
-	"time"
 )
 
 func (as *Service) Login(ctx context.Context, command commands.LoginCommand) (*models.TokenPair, error) {
@@ -42,21 +40,10 @@ func (as *Service) Login(ctx context.Context, command commands.LoginCommand) (*m
 		return nil, fmt.Errorf("%s: failed to generate token pair: %w", fn, err)
 	}
 
-	hashedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(tokens.RefreshToken), bcrypt.DefaultCost)
+	err = as.saveRefreshToken(ctx, user.Id, tokens.RefreshToken)
 	if err != nil {
-		as.log.Error("failed to hash refresh token", sl.Error(err))
-		return nil, fmt.Errorf("%s: failed to hash refresh token: %w", fn, err)
-	}
-
-	err = as.tokenRepo.SaveToken(ctx, dto.SaveTokenCommand{
-		RefreshTokenHash: string(hashedRefreshToken),
-		ExpiresAt:        time.Now().Add(as.cfg.RefreshTokenTtl),
-		UserId:           user.Id,
-	})
-
-	if err != nil {
-		as.log.Error("failed to save token", sl.Error(err))
-		return nil, fmt.Errorf("%s: failed to save token: %w", fn, err)
+		as.log.Error("failed to save refresh token", sl.Error(err))
+		return nil, fmt.Errorf("%s: failed to save refresh token: %w", fn, err)
 	}
 
 	return tokens, nil

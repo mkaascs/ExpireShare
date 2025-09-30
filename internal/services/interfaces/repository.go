@@ -15,12 +15,13 @@ type FileRepo interface {
 }
 
 type TokenRepo interface {
-	SaveToken(ctx context.Context, command repository.SaveTokenCommand) error
+	SaveToken(ctx context.Context, command repository.SaveTokenCommand) (int64, error)
 	GetToken(ctx context.Context, token string) (models.Token, error)
 	ReplaceToken(ctx context.Context, userId int64, newTokenHash string) error
 }
 
 type UserRepo interface {
+	AddUser(ctx context.Context, command repository.AddUserCommand) (int64, error)
 	GetUserById(ctx context.Context, userId int64) (models.User, error)
 	GetUserByLogin(ctx context.Context, login string) (models.User, error)
 }

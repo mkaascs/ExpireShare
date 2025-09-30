@@ -1,14 +1,32 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"expire-share/internal/domain/models"
+	dto "expire-share/internal/services/dto/repository"
 	"github.com/golang-jwt/jwt"
+	"golang.org/x/crypto/bcrypt"
 	"time"
 )
 
 const refreshTokenLength = 32
+
+func (as *Service) saveRefreshToken(ctx context.Context, userId int64, refreshToken string) error {
+	hashedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(refreshToken), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	_, err = as.tokenRepo.SaveToken(ctx, dto.SaveTokenCommand{
+		RefreshTokenHash: string(hashedRefreshToken),
+		ExpiresAt:        time.Now().Add(as.cfg.RefreshTokenTtl),
+		UserId:           userId,
+	})
+
+	return err
+}
 
 func (as *Service) generateTokenPair(userId int64, role models.UserRole) (*models.TokenPair, error) {
 	accessJwt := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{

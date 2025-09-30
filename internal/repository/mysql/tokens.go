@@ -70,6 +70,10 @@ func (tr *TokenRepo) GetToken(ctx context.Context, refreshTokenHash string) (_ m
 	return token, nil
 }
 
+func (tr *TokenRepo) ReplaceToken(ctx context.Context, userId int64, newTokenHash string) error {
+	return nil
+}
+
 func NewTokenRepo(db *sql.DB) *TokenRepo {
 	return &TokenRepo{Database: db}
 }

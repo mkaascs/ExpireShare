@@ -14,7 +14,7 @@ const (
 	maxBytes  = 10 * 1024 * 1024
 )
 
-func NewBodyParser(log *slog.Logger) func(http.Handler) http.Handler {
+func NewBodyParser[T any](log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		log = log.With(slog.String("component", "middleware/parsing"))
 
@@ -41,7 +41,7 @@ func NewBodyParser(log *slog.Logger) func(http.Handler) http.Handler {
 				return
 			}
 
-			var request interface{}
+			var request T
 			err := render.DecodeJSON(r.Body, &request)
 			if err != nil {
 				log.Info("failed to decode request body", sl.Error(err))

@@ -8,14 +8,19 @@ import (
 	"context"
 	"errors"
 	"expire-share/internal/config"
+	"expire-share/internal/crypto"
 	"expire-share/internal/delivery/http/api/files/get"
 	"expire-share/internal/delivery/http/api/files/remove"
 	"expire-share/internal/delivery/http/api/upload"
+	"expire-share/internal/delivery/http/auth/login"
+	"expire-share/internal/delivery/http/auth/register"
+	"expire-share/internal/delivery/http/auth/token/refresh"
 	"expire-share/internal/delivery/http/download"
 	myMiddleware "expire-share/internal/delivery/middlewares"
 	pkgLog "expire-share/internal/lib/log"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/repository/mysql"
+	"expire-share/internal/services/auth"
 	"expire-share/internal/services/files"
 	"expire-share/internal/services/worker"
 	"github.com/go-chi/chi"
@@ -49,6 +54,8 @@ func main() {
 	}
 
 	fileRepo := mysql.NewFileRepo(db)
+	userRepo := mysql.NewUserRepo(db)
+	tokenRepo := mysql.NewTokenRepo(db)
 
 	defer func() {
 		err := fileRepo.Database.Close()
@@ -58,6 +65,9 @@ func main() {
 	}()
 
 	lg.Info("repository was initialized successfully", slog.String("connection_string", cfg.ConnectionString))
+
+	keyManager := crypto.MustLoad(envPath)
+	lg.Info("rsa key manager was loaded successfully")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -76,6 +86,7 @@ func main() {
 	router.Use(myMiddleware.NewLogger(lg))
 
 	fileService := files.New(fileRepo, lg, *cfg)
+	authService := auth.New(tokenRepo, userRepo, *cfg, lg, keyManager.GetPrivateKey())
 
 	if cfg.Environment == config.EnvironmentLocal {
 		router.Get("/swagger/*", httpSwagger.Handler(
@@ -88,10 +99,24 @@ func main() {
 	router.Route("/api", func(r chi.Router) {
 		r.Post("/upload", upload.New(fileService, lg, *cfg))
 
-		r.Group(func(r chi.Router) {
-			r.Get("/file/{alias}", get.New(fileService, lg))
-			r.Delete("/file/{alias}", remove.New(fileService, lg))
+		r.Route("/file", func(r chi.Router) {
+			r.Get("/{alias}", get.New(fileService, lg))
+			r.Delete("/{alias}", remove.New(fileService, lg))
 		})
+	})
+
+	router.Route("/auth", func(r chi.Router) {
+		r.With(myMiddleware.NewBodyParser[login.Request](lg)).
+			With(myMiddleware.NewValidator[login.Request](lg)).
+			Post("/login", login.New(authService, lg))
+
+		r.With(myMiddleware.NewBodyParser[register.Request](lg)).
+			With(myMiddleware.NewValidator[register.Request](lg)).
+			Post("/register", register.New(authService, lg))
+
+		r.With(myMiddleware.NewBodyParser[login.Request](lg)).
+			With(myMiddleware.NewValidator[refresh.Request](lg)).
+			Post("/token/refresh", refresh.New(authService, lg))
 	})
 
 	lg.Info("starting expire share server", slog.String("address", cfg.HttpServer.Address))
