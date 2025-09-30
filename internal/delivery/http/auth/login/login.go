@@ -15,7 +15,7 @@ import (
 
 type Request struct {
 	Login    string `json:"login" validate:"min=3" required:"true" example:"user"`
-	Password string `json:"password" validate:"min=5" example:"expire123"`
+	Password string `json:"password" validate:"min=5" example:"expire123" required:"true"`
 }
 
 type Response struct {
@@ -30,7 +30,7 @@ type UserLogin interface {
 
 func New(login UserLogin, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const fn = "http.api.login.New"
+		const fn = "http.auth.login.New"
 		log = slog.With(
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))

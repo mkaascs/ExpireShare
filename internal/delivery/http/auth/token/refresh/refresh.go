@@ -28,7 +28,7 @@ type TokenRefresher interface {
 
 func New(refresher TokenRefresher, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const fn = "http.api.token.refresh.New"
+		const fn = "http.auth.token.refresh.New"
 		log = slog.With(
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
