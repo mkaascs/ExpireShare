@@ -94,5 +94,19 @@ func RenderUserServiceError(w http.ResponseWriter, r *http.Request, err error) b
 		return true
 	}
 
+	if errors.Is(err, auth.ErrTokenNotFound) {
+		RenderError(w, r,
+			http.StatusUnauthorized,
+			"refresh token is invalid")
+		return true
+	}
+
+	if errors.Is(err, auth.ErrTokenExpired) {
+		RenderError(w, r,
+			http.StatusUnauthorized,
+			"refresh token is expired. try to login")
+		return true
+	}
+
 	return false
 }

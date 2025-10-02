@@ -9,7 +9,6 @@ import (
 	"expire-share/internal/domain/errors/repository"
 	"expire-share/internal/domain/errors/services/auth"
 	"expire-share/internal/domain/models"
-	"golang.org/x/crypto/bcrypt"
 	"log/slog"
 	"time"
 )
@@ -21,9 +20,7 @@ func (as *Service) RefreshToken(ctx context.Context, refreshToken string) (*mode
 	tokenHash := hmac.New(sha256.New, as.secrets.HmacSecret)
 	tokenHash.Write([]byte(refreshToken))
 
-	tokenHashStr := base64.URLEncoding.EncodeToString(tokenHash.Sum(nil))
-
-	token, err := as.tokenRepo.GetToken(ctx, tokenHashStr)
+	token, err := as.tokenRepo.GetToken(ctx, base64.URLEncoding.EncodeToString(tokenHash.Sum(nil)))
 	if err != nil {
 		if errors.Is(err, repository.ErrTokenNotFound) {
 			as.log.Info("token not found")
@@ -56,13 +53,10 @@ func (as *Service) RefreshToken(ctx context.Context, refreshToken string) (*mode
 		return nil, err
 	}
 
-	newTokenHash, err := bcrypt.GenerateFromPassword([]byte(pair.RefreshToken), bcrypt.DefaultCost)
-	if err != nil {
-		as.log.Error("failed to encrypt token")
-		return nil, err
-	}
+	tokenHash.Reset()
+	tokenHash.Write([]byte(pair.RefreshToken))
 
-	err = as.tokenRepo.ReplaceToken(ctx, user.Id, string(newTokenHash))
+	err = as.tokenRepo.ReplaceToken(ctx, user.Id, base64.URLEncoding.EncodeToString(tokenHash.Sum(nil)))
 	if err != nil {
 		as.log.Error("failed to update token")
 		return nil, err
