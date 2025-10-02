@@ -2,6 +2,9 @@ package auth
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"expire-share/internal/domain/errors/repository"
 	"expire-share/internal/domain/errors/services/auth"
@@ -15,9 +18,12 @@ func (as *Service) RefreshToken(ctx context.Context, refreshToken string) (*mode
 	const fn = "services.auth.Service.RefreshToken"
 	as.log = slog.With(slog.String("fn", fn))
 
-	tokenHash, err := bcrypt.GenerateFromPassword([]byte(refreshToken), bcrypt.DefaultCost)
+	tokenHash := hmac.New(sha256.New, as.secrets.HmacSecret)
+	tokenHash.Write([]byte(refreshToken))
 
-	token, err := as.tokenRepo.GetToken(ctx, string(tokenHash))
+	tokenHashStr := base64.URLEncoding.EncodeToString(tokenHash.Sum(nil))
+
+	token, err := as.tokenRepo.GetToken(ctx, tokenHashStr)
 	if err != nil {
 		if errors.Is(err, repository.ErrTokenNotFound) {
 			as.log.Info("token not found")

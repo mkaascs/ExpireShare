@@ -2,25 +2,24 @@ package auth
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"expire-share/internal/domain/models"
 	dto "expire-share/internal/services/dto/repository"
 	"github.com/golang-jwt/jwt"
-	"golang.org/x/crypto/bcrypt"
 	"time"
 )
 
 const refreshTokenLength = 32
 
 func (as *Service) saveRefreshToken(ctx context.Context, userId int64, refreshToken string) error {
-	hashedRefreshToken, err := bcrypt.GenerateFromPassword([]byte(refreshToken), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
+	refreshTokenHash := hmac.New(sha256.New, as.secrets.HmacSecret)
+	refreshTokenHash.Write([]byte(refreshToken))
 
-	_, err = as.tokenRepo.SaveToken(ctx, dto.SaveTokenCommand{
-		RefreshTokenHash: string(hashedRefreshToken),
+	_, err := as.tokenRepo.SaveToken(ctx, dto.SaveTokenCommand{
+		RefreshTokenHash: base64.URLEncoding.EncodeToString(refreshTokenHash.Sum(nil)),
 		ExpiresAt:        time.Now().Add(as.cfg.RefreshTokenTtl),
 		UserId:           userId,
 	})
