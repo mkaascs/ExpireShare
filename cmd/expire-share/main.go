@@ -64,10 +64,19 @@ func main() {
 		}
 	}()
 
-	lg.Info("repository was initialized successfully", slog.String("connection_string", cfg.ConnectionString))
+	lg.Info("repositories were initialized successfully", slog.String("connection_string", cfg.ConnectionString))
 
-	keyManager := crypto.MustLoad(envPath)
-	lg.Info("rsa key manager was loaded successfully")
+	rsaKeyConfig, err := crypto.NewRsaKey(envPath)
+	if err != nil {
+		lg.Error("failed to load rsa key:", sl.Error(err))
+		os.Exit(1)
+	}
+
+	hmacConfig, err := crypto.NewHmacConfig(envPath)
+	if err != nil {
+		lg.Error("failed to load hmac config:", sl.Error(err))
+		os.Exit(1)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -86,7 +95,9 @@ func main() {
 	router.Use(myMiddleware.NewLogger(lg))
 
 	fileService := files.New(fileRepo, lg, *cfg)
-	authService := auth.New(tokenRepo, userRepo, *cfg, lg, keyManager.GetPrivateKey())
+	authService := auth.New(tokenRepo, userRepo, *cfg, lg, auth.Secrets{
+		PrivateKey: rsaKeyConfig.GetPrivateKey(),
+		HmacSecret: hmacConfig.GetHmacSecret()})
 
 	if cfg.Environment == config.EnvironmentLocal {
 		router.Get("/swagger/*", httpSwagger.Handler(
@@ -114,7 +125,7 @@ func main() {
 			With(myMiddleware.NewValidator[register.Request](lg)).
 			Post("/register", register.New(authService, lg))
 
-		r.With(myMiddleware.NewBodyParser[login.Request](lg)).
+		r.With(myMiddleware.NewBodyParser[refresh.Request](lg)).
 			With(myMiddleware.NewValidator[refresh.Request](lg)).
 			Post("/token/refresh", refresh.New(authService, lg))
 	})

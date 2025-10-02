@@ -7,20 +7,25 @@ import (
 	"log/slog"
 )
 
-type Service struct {
-	tokenRepo  interfaces.TokenRepo
-	userRepo   interfaces.UserRepo
-	cfg        config.Config
-	log        *slog.Logger
-	privateKey *rsa.PrivateKey
+type Secrets struct {
+	PrivateKey *rsa.PrivateKey
+	HmacSecret []byte
 }
 
-func New(tokenRepo interfaces.TokenRepo, userRepo interfaces.UserRepo, cfg config.Config, log *slog.Logger, privateKey *rsa.PrivateKey) *Service {
+type Service struct {
+	tokenRepo interfaces.TokenRepo
+	userRepo  interfaces.UserRepo
+	cfg       config.Config
+	log       *slog.Logger
+	secrets   Secrets
+}
+
+func New(tokenRepo interfaces.TokenRepo, userRepo interfaces.UserRepo, cfg config.Config, log *slog.Logger, secrets Secrets) *Service {
 	return &Service{
-		tokenRepo:  tokenRepo,
-		userRepo:   userRepo,
-		cfg:        cfg,
-		log:        log,
-		privateKey: privateKey,
+		tokenRepo: tokenRepo,
+		userRepo:  userRepo,
+		cfg:       cfg,
+		log:       log,
+		secrets:   secrets,
 	}
 }

@@ -71,6 +71,24 @@ func (tr *TokenRepo) GetToken(ctx context.Context, refreshTokenHash string) (_ m
 }
 
 func (tr *TokenRepo) ReplaceToken(ctx context.Context, userId int64, newTokenHash string) error {
+	const fn = "repository.mysql.TokenRepo.ReplaceToken"
+
+	stmt, err := tr.Database.PrepareContext(ctx, `UPDATE tokens SET refresh_token_hash = ? WHERE user_id = ?`)
+	if err != nil {
+		return fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
+	}
+
+	defer stmtClose(stmt, &err)
+
+	_, err = stmt.ExecContext(ctx, newTokenHash, userId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return repositoryErr.ErrTokenNotFound
+		}
+
+		return fmt.Errorf("%s: failed to update row: %w", fn, err)
+	}
+
 	return nil
 }
 

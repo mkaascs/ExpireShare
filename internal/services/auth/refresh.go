@@ -15,7 +15,9 @@ func (as *Service) RefreshToken(ctx context.Context, refreshToken string) (*mode
 	const fn = "services.auth.Service.RefreshToken"
 	as.log = slog.With(slog.String("fn", fn))
 
-	token, err := as.tokenRepo.GetToken(ctx, refreshToken)
+	tokenHash, err := bcrypt.GenerateFromPassword([]byte(refreshToken), bcrypt.DefaultCost)
+
+	token, err := as.tokenRepo.GetToken(ctx, string(tokenHash))
 	if err != nil {
 		if errors.Is(err, repository.ErrTokenNotFound) {
 			as.log.Info("token not found")
@@ -48,13 +50,13 @@ func (as *Service) RefreshToken(ctx context.Context, refreshToken string) (*mode
 		return nil, err
 	}
 
-	tokenHash, err := bcrypt.GenerateFromPassword([]byte(pair.RefreshToken), bcrypt.DefaultCost)
+	newTokenHash, err := bcrypt.GenerateFromPassword([]byte(pair.RefreshToken), bcrypt.DefaultCost)
 	if err != nil {
 		as.log.Error("failed to encrypt token")
 		return nil, err
 	}
 
-	err = as.tokenRepo.ReplaceToken(ctx, user.Id, string(tokenHash))
+	err = as.tokenRepo.ReplaceToken(ctx, user.Id, string(newTokenHash))
 	if err != nil {
 		as.log.Error("failed to update token")
 		return nil, err

@@ -7,26 +7,15 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/joho/godotenv"
-	"log"
 	"os"
 	"path/filepath"
 )
 
-type KeyManager struct {
+type RsaKeyConfig struct {
 	privateKey *rsa.PrivateKey
-	keyPath    string
 }
 
-func MustLoad(envPath string) *KeyManager {
-	km, err := Load(envPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return km
-}
-
-func Load(envPath string) (*KeyManager, error) {
+func NewRsaKey(envPath string) (*RsaKeyConfig, error) {
 	path := filepath.Join(envPath, ".env")
 	if err := godotenv.Load(path); err != nil {
 		return nil, fmt.Errorf("failed to load .env file: %w", err)
@@ -37,29 +26,23 @@ func Load(envPath string) (*KeyManager, error) {
 		return nil, fmt.Errorf("env variable RSA_KEY_PATH not found")
 	}
 
-	km := &KeyManager{keyPath: keyPath}
+	keyConfig := &RsaKeyConfig{}
 
-	if err := km.loadKey(); err == nil {
-		return km, nil
+	if err := keyConfig.loadKey(keyPath); err != nil {
+		if err = keyConfig.generateKey(keyPath); err != nil {
+			return nil, fmt.Errorf("failed to load or generate key: %w", err)
+		}
 	}
 
-	if err := km.generateKey(); err != nil {
-		return nil, fmt.Errorf("error generating key: %v", err)
-	}
-
-	return km, nil
+	return keyConfig, nil
 }
 
-func (km *KeyManager) GetPrivateKey() *rsa.PrivateKey {
-	return km.privateKey
+func (kc *RsaKeyConfig) GetPrivateKey() *rsa.PrivateKey {
+	return kc.privateKey
 }
 
-func (km *KeyManager) GetPublicKey() *rsa.PublicKey {
-	return &km.privateKey.PublicKey
-}
-
-func (km *KeyManager) loadKey() error {
-	data, err := os.ReadFile(km.keyPath)
+func (kc *RsaKeyConfig) loadKey(keyPath string) error {
+	data, err := os.ReadFile(keyPath)
 	if err != nil {
 		return fmt.Errorf("failed to read key file: %w", err)
 	}
@@ -84,31 +67,31 @@ func (km *KeyManager) loadKey() error {
 		privateKey = rsaKey
 	}
 
-	km.privateKey = privateKey
+	kc.privateKey = privateKey
 	return nil
 }
 
-func (km *KeyManager) generateKey() error {
+func (kc *RsaKeyConfig) generateKey(keyPath string) error {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return fmt.Errorf("failed to generate private key: %w", err)
 	}
 
-	km.privateKey = privateKey
-	return km.saveKey()
+	kc.privateKey = privateKey
+	return kc.saveKey(keyPath)
 }
 
-func (km *KeyManager) saveKey() error {
-	dir := filepath.Dir(km.keyPath)
+func (kc *RsaKeyConfig) saveKey(keyPath string) error {
+	dir := filepath.Dir(keyPath)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("failed to create key directory: %w", err)
 	}
 
-	privateKeyBytes := x509.MarshalPKCS1PrivateKey(km.privateKey)
+	privateKeyBytes := x509.MarshalPKCS1PrivateKey(kc.privateKey)
 	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: privateKeyBytes,
 	})
 
-	return os.WriteFile(km.keyPath, privateKeyPEM, 0600)
+	return os.WriteFile(keyPath, privateKeyPEM, 0600)
 }

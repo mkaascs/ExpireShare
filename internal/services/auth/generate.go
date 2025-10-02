@@ -37,7 +37,7 @@ func (as *Service) generateTokenPair(userId int64, role models.UserRole) (*model
 		"iat":  time.Now().Unix(),
 	})
 
-	accessToken, err := accessJwt.SignedString(as.privateKey)
+	accessToken, err := accessJwt.SignedString(as.secrets.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
