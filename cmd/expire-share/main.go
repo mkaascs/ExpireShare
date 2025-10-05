@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"expire-share/internal/config"
 	"expire-share/internal/crypto"
@@ -17,7 +18,7 @@ import (
 	"expire-share/internal/delivery/http/auth/token/refresh"
 	"expire-share/internal/delivery/http/download"
 	myMiddleware "expire-share/internal/delivery/middlewares"
-	pkgLog "expire-share/internal/lib/log"
+	myLog "expire-share/internal/lib/log"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/repository/mysql"
 	"expire-share/internal/services/auth"
@@ -26,11 +27,137 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
 )
+
+type App struct {
+	router chi.Router
+
+	cfg *config.Config
+	lg  *slog.Logger
+	db  *sql.DB
+
+	fileService *files.Service
+	authService *auth.Service
+}
+
+func (a *App) Run() error {
+	server := http.Server{
+		Addr:         a.cfg.HttpServer.Address,
+		Handler:      a.router,
+		ReadTimeout:  a.cfg.Timeout,
+		WriteTimeout: a.cfg.Timeout,
+		IdleTimeout:  a.cfg.IdleTimeout,
+	}
+
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		a.lg.Error("failed to start http server:", sl.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+func (a *App) Close() error {
+	if err := a.db.Close(); err != nil {
+		a.lg.Error("failed to close database connection:", sl.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+func (a *App) MountHandlers() {
+	if a.cfg.Environment == config.EnvironmentLocal {
+		a.router.Get("/swagger/*", httpSwagger.Handler(
+			httpSwagger.URL("/swagger/doc.json"),
+		))
+	}
+
+	a.router.Get("/download/{alias}", download.New(a.fileService, a.lg))
+
+	a.router.Route("/api", func(r chi.Router) {
+		r.Post("/upload", upload.New(a.fileService, a.lg, *a.cfg))
+
+		r.Route("/file", func(r chi.Router) {
+			r.Get("/{alias}", get.New(a.fileService, a.lg))
+			r.Delete("/{alias}", remove.New(a.fileService, a.lg))
+		})
+	})
+
+	a.router.Route("/auth", func(r chi.Router) {
+		r.With(myMiddleware.NewBodyParser[login.Request](a.lg)).
+			With(myMiddleware.NewValidator[login.Request](a.lg)).
+			Post("/login", login.New(a.authService, a.lg))
+
+		r.With(myMiddleware.NewBodyParser[register.Request](a.lg)).
+			With(myMiddleware.NewValidator[register.Request](a.lg)).
+			Post("/register", register.New(a.authService, a.lg))
+
+		r.With(myMiddleware.NewBodyParser[refresh.Request](a.lg)).
+			With(myMiddleware.NewValidator[refresh.Request](a.lg)).
+			Post("/token/refresh", refresh.New(a.authService, a.lg))
+	})
+}
+
+func (a *App) MountMiddlewares() {
+	a.router.Use(middleware.RequestID)
+	a.router.Use(middleware.RealIP)
+	a.router.Use(middleware.Recoverer)
+	a.router.Use(middleware.URLFormat)
+	a.router.Use(myMiddleware.NewLogger(a.lg))
+}
+
+func (a *App) StartFileWorker() context.CancelFunc {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	fileWorker := worker.NewFileWorker(mysql.NewFileRepo(a.db), a.lg, *a.cfg)
+	go fileWorker.Start(ctx)
+
+	return cancel
+}
+
+func NewApp(envPath string) (*App, error) {
+	app := &App{
+		cfg: config.MustLoad(envPath),
+	}
+
+	app.lg = myLog.MustLoad(app.cfg.Environment)
+
+	var err error
+	app.db, err = mysql.Connect(app.cfg.ConnectionString)
+	if err != nil {
+		app.lg.Error("failed to connect to database:", sl.Error(err))
+		return nil, err
+	}
+
+	fileRepo := mysql.NewFileRepo(app.db)
+	userRepo := mysql.NewUserRepo(app.db)
+	tokenRepo := mysql.NewTokenRepo(app.db)
+
+	rsaKeyConfig, err := crypto.NewRsaKey(envPath)
+	if err != nil {
+		app.lg.Error("failed to load rsa key:", sl.Error(err))
+		return nil, err
+	}
+
+	hmacConfig, err := crypto.NewHmacConfig(envPath)
+	if err != nil {
+		app.lg.Error("failed to load hmac config:", sl.Error(err))
+		return nil, err
+	}
+
+	app.fileService = files.New(fileRepo, app.lg, *app.cfg)
+	app.authService = auth.New(tokenRepo, userRepo, *app.cfg, app.lg, auth.Secrets{
+		PrivateKey: rsaKeyConfig.GetPrivateKey(),
+		HmacSecret: hmacConfig.GetHmacSecret()})
+
+	app.router = chi.NewRouter()
+
+	return app, nil
+}
 
 func main() {
 	envPath := ""
@@ -38,111 +165,26 @@ func main() {
 		envPath = os.Args[1]
 	}
 
-	cfg := config.MustLoad(envPath)
-
-	lg, err := pkgLog.New(cfg.Environment)
+	app, err := NewApp(envPath)
 	if err != nil {
-		log.Fatal("failed to initialize logger:", err)
-	}
-
-	lg.Info("starting expire share", slog.String("environment", cfg.Environment))
-
-	db, err := mysql.Connect(cfg.ConnectionString)
-	if err != nil {
-		lg.Error("failed to connect to database:", sl.Error(err))
 		os.Exit(1)
 	}
 
-	fileRepo := mysql.NewFileRepo(db)
-	userRepo := mysql.NewUserRepo(db)
-	tokenRepo := mysql.NewTokenRepo(db)
+	app.lg.Info("expire share app is initialized", slog.String("enviroment", app.cfg.Environment))
+	defer func(app *App) {
+		_ = app.Close()
+	}(app)
 
-	defer func() {
-		err := fileRepo.Database.Close()
-		if err != nil {
-			lg.Error("failed to close repository:", sl.Error(err))
-		}
-	}()
-
-	lg.Info("repositories were initialized successfully", slog.String("connection_string", cfg.ConnectionString))
-
-	rsaKeyConfig, err := crypto.NewRsaKey(envPath)
-	if err != nil {
-		lg.Error("failed to load rsa key:", sl.Error(err))
-		os.Exit(1)
-	}
-
-	hmacConfig, err := crypto.NewHmacConfig(envPath)
-	if err != nil {
-		lg.Error("failed to load hmac config:", sl.Error(err))
-		os.Exit(1)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
+	cancel := app.StartFileWorker()
 	defer cancel()
 
-	fileWorker := worker.NewFileWorker(fileRepo, lg, *cfg)
-	go fileWorker.Start(ctx)
+	app.lg.Info("file worker was started")
 
-	lg.Info("file worker was started")
+	app.MountMiddlewares()
+	app.MountHandlers()
 
-	router := chi.NewRouter()
+	app.lg.Info("starting expire share server", slog.String("address", app.cfg.HttpServer.Address))
 
-	router.Use(middleware.RequestID)
-	router.Use(middleware.RealIP)
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.URLFormat)
-	router.Use(myMiddleware.NewLogger(lg))
-
-	fileService := files.New(fileRepo, lg, *cfg)
-	authService := auth.New(tokenRepo, userRepo, *cfg, lg, auth.Secrets{
-		PrivateKey: rsaKeyConfig.GetPrivateKey(),
-		HmacSecret: hmacConfig.GetHmacSecret()})
-
-	if cfg.Environment == config.EnvironmentLocal {
-		router.Get("/swagger/*", httpSwagger.Handler(
-			httpSwagger.URL("/swagger/doc.json"),
-		))
-	}
-
-	router.Get("/download/{alias}", download.New(fileService, lg))
-
-	router.Route("/api", func(r chi.Router) {
-		r.Post("/upload", upload.New(fileService, lg, *cfg))
-
-		r.Route("/file", func(r chi.Router) {
-			r.Get("/{alias}", get.New(fileService, lg))
-			r.Delete("/{alias}", remove.New(fileService, lg))
-		})
-	})
-
-	router.Route("/auth", func(r chi.Router) {
-		r.With(myMiddleware.NewBodyParser[login.Request](lg)).
-			With(myMiddleware.NewValidator[login.Request](lg)).
-			Post("/login", login.New(authService, lg))
-
-		r.With(myMiddleware.NewBodyParser[register.Request](lg)).
-			With(myMiddleware.NewValidator[register.Request](lg)).
-			Post("/register", register.New(authService, lg))
-
-		r.With(myMiddleware.NewBodyParser[refresh.Request](lg)).
-			With(myMiddleware.NewValidator[refresh.Request](lg)).
-			Post("/token/refresh", refresh.New(authService, lg))
-	})
-
-	lg.Info("starting expire share server", slog.String("address", cfg.HttpServer.Address))
-
-	server := http.Server{
-		Addr:         cfg.HttpServer.Address,
-		Handler:      router,
-		ReadTimeout:  cfg.Timeout,
-		WriteTimeout: cfg.Timeout,
-		IdleTimeout:  cfg.IdleTimeout,
-	}
-
-	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		lg.Error("failed to start http server:", sl.Error(err))
-	}
-
-	lg.Error("server stopped")
+	_ = app.Run()
+	app.lg.Error("server stopped")
 }
