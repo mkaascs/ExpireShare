@@ -4,15 +4,25 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/joho/godotenv"
+	"maps"
 	"os"
 	"path/filepath"
 )
 
 type HmacConfig struct {
-	hmacSecret []byte
+	accessTokenSecret  []byte
+	refreshTokenSecret []byte
 }
 
-const hmacSecretLength = 64
+const hmacSecretLength = 32
+
+func (hc *HmacConfig) GetAccessTokenSecret() []byte {
+	return hc.accessTokenSecret
+}
+
+func (hc *HmacConfig) GetRefreshTokenSecret() []byte {
+	return hc.refreshTokenSecret
+}
 
 func NewHmacConfig(envPath string) (*HmacConfig, error) {
 	path := filepath.Join(envPath, ".env")
@@ -20,41 +30,40 @@ func NewHmacConfig(envPath string) (*HmacConfig, error) {
 		return nil, fmt.Errorf("failed to load .env file: %w", err)
 	}
 
-	keyPath := os.Getenv("HMAC_SECRET_PATH")
-	if keyPath == "" {
-		return nil, fmt.Errorf("env variable HMAC_SECRET_PATH not found")
-	}
-
 	hmacConfig := &HmacConfig{}
 
-	if err := hmacConfig.loadSecret(keyPath); err != nil {
-		if err = hmacConfig.generateSecret(keyPath); err != nil {
-			return nil, fmt.Errorf("failed to load or generate secret: %w", err)
+	secrets := map[string]*[]byte{
+		"ACCESS_TOKEN_SECRET_PATH":  &hmacConfig.accessTokenSecret,
+		"REFRESH_TOKEN_SECRET_PATH": &hmacConfig.refreshTokenSecret,
+	}
+
+	for key := range maps.Keys(secrets) {
+		keyPath := os.Getenv(key)
+		if keyPath == "" {
+			return nil, fmt.Errorf("env variable %s not found", key)
+		}
+
+		var err error
+		*secrets[key], err = os.ReadFile(keyPath)
+		if err != nil {
+			if *secrets[key], err = generateSecret(keyPath); err != nil {
+				return nil, fmt.Errorf("failed to load and generate secret: %w", err)
+			}
 		}
 	}
 
 	return hmacConfig, nil
 }
 
-func (hc *HmacConfig) GetHmacSecret() []byte {
-	return hc.hmacSecret
-}
-
-func (hc *HmacConfig) loadSecret(secretPath string) error {
-	data, err := os.ReadFile(secretPath)
-	if err == nil {
-		hc.hmacSecret = data
-	}
-
-	return err
-}
-
-func (hc *HmacConfig) generateSecret(secretPath string) error {
+func generateSecret(secretPath string) ([]byte, error) {
 	secret := make([]byte, hmacSecretLength)
 	if _, err := rand.Read(secret); err != nil {
-		return err
+		return nil, err
 	}
 
-	hc.hmacSecret = secret
-	return os.WriteFile(secretPath, hc.hmacSecret, 0600)
+	if err := os.WriteFile(secretPath, secret, 0600); err != nil {
+		return nil, err
+	}
+
+	return secret, nil
 }
