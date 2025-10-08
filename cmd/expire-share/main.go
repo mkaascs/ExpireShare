@@ -137,12 +137,6 @@ func NewApp(envPath string) (*App, error) {
 	userRepo := mysql.NewUserRepo(app.db)
 	tokenRepo := mysql.NewTokenRepo(app.db)
 
-	rsaKeyConfig, err := crypto.NewRsaKey(envPath)
-	if err != nil {
-		app.lg.Error("failed to load rsa key:", sl.Error(err))
-		return nil, err
-	}
-
 	hmacConfig, err := crypto.NewHmacConfig(envPath)
 	if err != nil {
 		app.lg.Error("failed to load hmac config:", sl.Error(err))
@@ -151,8 +145,8 @@ func NewApp(envPath string) (*App, error) {
 
 	app.fileService = files.New(fileRepo, app.lg, *app.cfg)
 	app.authService = auth.New(tokenRepo, userRepo, *app.cfg, app.lg, auth.Secrets{
-		PrivateKey: rsaKeyConfig.GetPrivateKey(),
-		HmacSecret: hmacConfig.GetHmacSecret()})
+		AccessTokenSecret:  hmacConfig.GetAccessTokenSecret(),
+		RefreshTokenSecret: hmacConfig.GetRefreshTokenSecret()})
 
 	app.router = chi.NewRouter()
 

@@ -1,15 +1,15 @@
 package auth
 
 import (
-	"crypto/rsa"
 	"expire-share/internal/config"
 	"expire-share/internal/services/interfaces"
+	"github.com/go-chi/jwtauth"
 	"log/slog"
 )
 
 type Secrets struct {
-	PrivateKey *rsa.PrivateKey
-	HmacSecret []byte
+	AccessTokenSecret  []byte
+	RefreshTokenSecret []byte
 }
 
 type Service struct {
@@ -18,6 +18,7 @@ type Service struct {
 	cfg       config.Config
 	log       *slog.Logger
 	secrets   Secrets
+	jwtAuth   *jwtauth.JWTAuth
 }
 
 func New(tokenRepo interfaces.TokenRepo, userRepo interfaces.UserRepo, cfg config.Config, log *slog.Logger, secrets Secrets) *Service {
@@ -27,5 +28,6 @@ func New(tokenRepo interfaces.TokenRepo, userRepo interfaces.UserRepo, cfg confi
 		cfg:       cfg,
 		log:       log,
 		secrets:   secrets,
+		jwtAuth:   jwtauth.New("HS256", []byte(secrets.AccessTokenSecret), nil),
 	}
 }

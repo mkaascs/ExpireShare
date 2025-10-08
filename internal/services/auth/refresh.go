@@ -17,7 +17,7 @@ func (as *Service) RefreshToken(ctx context.Context, refreshToken string) (*mode
 	const fn = "services.auth.Service.RefreshToken"
 	as.log = slog.With(slog.String("fn", fn))
 
-	tokenHash := hmac.New(sha256.New, as.secrets.HmacSecret)
+	tokenHash := hmac.New(sha256.New, as.secrets.RefreshTokenSecret)
 	tokenHash.Write([]byte(refreshToken))
 
 	token, err := as.tokenRepo.GetToken(ctx, base64.URLEncoding.EncodeToString(tokenHash.Sum(nil)))
