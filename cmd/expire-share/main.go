@@ -26,6 +26,7 @@ import (
 	"expire-share/internal/services/worker"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/jwtauth"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"log/slog"
 	"net/http"
@@ -79,6 +80,9 @@ func (a *App) MountHandlers() {
 	a.router.Get("/download/{alias}", download.New(a.fileService, a.lg))
 
 	a.router.Route("/api", func(r chi.Router) {
+		r.Use(jwtauth.Verifier(a.authService.JwtAuth))
+		r.Use(jwtauth.Authenticator)
+
 		r.Post("/upload", upload.New(a.fileService, a.lg, *a.cfg))
 
 		r.Route("/file", func(r chi.Router) {

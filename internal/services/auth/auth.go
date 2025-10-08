@@ -18,7 +18,8 @@ type Service struct {
 	cfg       config.Config
 	log       *slog.Logger
 	secrets   Secrets
-	jwtAuth   *jwtauth.JWTAuth
+
+	JwtAuth *jwtauth.JWTAuth
 }
 
 func New(tokenRepo interfaces.TokenRepo, userRepo interfaces.UserRepo, cfg config.Config, log *slog.Logger, secrets Secrets) *Service {
@@ -28,6 +29,6 @@ func New(tokenRepo interfaces.TokenRepo, userRepo interfaces.UserRepo, cfg confi
 		cfg:       cfg,
 		log:       log,
 		secrets:   secrets,
-		jwtAuth:   jwtauth.New("HS256", []byte(secrets.AccessTokenSecret), nil),
+		JwtAuth:   jwtauth.New("HS256", secrets.AccessTokenSecret, nil),
 	}
 }

@@ -8,14 +8,15 @@ import (
 	"encoding/base64"
 	"expire-share/internal/domain/models"
 	dto "expire-share/internal/services/dto/repository"
+	"strconv"
 	"time"
 )
 
 const refreshTokenLength = 32
 
 func (as *Service) generateTokenPair(userId int64, role models.UserRole) (*models.TokenPair, error) {
-	_, accessToken, err := as.jwtAuth.Encode(map[string]interface{}{
-		"sub":  userId,
+	_, accessToken, err := as.JwtAuth.Encode(map[string]interface{}{
+		"sub":  strconv.FormatInt(userId, 10),
 		"role": role,
 		"exp":  time.Now().Add(as.cfg.AccessTokenTtl).Unix(),
 	})

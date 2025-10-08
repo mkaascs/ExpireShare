@@ -9,11 +9,13 @@ import (
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto/commands"
 	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/jwtauth"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -53,7 +55,25 @@ func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.Handle
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
 
-		err := r.ParseMultipartForm(cfg.MaxFileSizeInBytes)
+		_, claims, err := jwtauth.FromContext(r.Context())
+		if err != nil {
+			log.Error("failed to extract claims", sl.Error(err))
+			response.RenderError(w, r,
+				http.StatusInternalServerError,
+				"failed to upload file")
+			return
+		}
+
+		userIdStr, ok := claims["sub"].(string)
+		if !ok {
+			log.Error("failed to extract user id")
+			response.RenderError(w, r,
+				http.StatusInternalServerError,
+				"failed to upload file")
+			return
+		}
+
+		err = r.ParseMultipartForm(cfg.MaxFileSizeInBytes)
 		if err != nil {
 			log.Error("failed to parse form", sl.Error(err))
 			response.RenderError(w, r,
@@ -111,6 +131,7 @@ func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.Handle
 		}(file)
 
 		ctx := r.Context()
+		userId, _ := strconv.ParseInt(userIdStr, 10, 64)
 		alias, err := uploader.UploadFile(ctx, commands.UploadFileCommand{
 			File:         file,
 			FileSize:     header.Size,
@@ -118,6 +139,7 @@ func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.Handle
 			Password:     request.Password,
 			MaxDownloads: request.MaxDownloads,
 			TTL:          parsedTtl,
+			UserId:       userId,
 		})
 
 		if err != nil {

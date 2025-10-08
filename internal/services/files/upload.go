@@ -72,6 +72,7 @@ func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFileCo
 		MaxDownloads: command.MaxDownloads,
 		TTL:          command.TTL,
 		PasswordHash: string(hashedBytes),
+		UserId:       command.UserId,
 	}
 
 	_, err = fs.fileRepo.AddFile(ctx, addFileCommand)

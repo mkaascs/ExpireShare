@@ -20,7 +20,7 @@ type FileRepo struct {
 func (fr *FileRepo) AddFile(ctx context.Context, command repository.AddFileCommand) (_ int64, err error) {
 	const fn = "repository.mysql.FileRepo.AddFile"
 
-	stmt, err := fr.Database.PrepareContext(ctx, `INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at, password_hash) VALUES(?, ?, ?, ?, ?, ?)`)
+	stmt, err := fr.Database.PrepareContext(ctx, `INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at, password_hash, user_id) VALUES(?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return 0, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}
@@ -34,7 +34,8 @@ func (fr *FileRepo) AddFile(ctx context.Context, command repository.AddFileComma
 		command.MaxDownloads,
 		currentTime,
 		currentTime.Add(command.TTL),
-		command.PasswordHash)
+		command.PasswordHash,
+		command.UserId)
 
 	if err != nil {
 		var mysqlErr *mysql.MySQLError

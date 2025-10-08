@@ -8,6 +8,7 @@ type AddFileCommand struct {
 	MaxDownloads int16
 	PasswordHash string
 	TTL          time.Duration
+	UserId       int64
 }
 
 type SaveTokenCommand struct {

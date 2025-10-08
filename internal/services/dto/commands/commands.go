@@ -12,6 +12,7 @@ type UploadFileCommand struct {
 	MaxDownloads int16
 	Password     string
 	TTL          time.Duration
+	UserId       int64
 }
 
 type DownloadFileCommand struct {
