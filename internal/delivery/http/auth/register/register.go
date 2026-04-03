@@ -3,7 +3,6 @@ package register
 import (
 	"context"
 	"expire-share/internal/delivery/middlewares"
-	"expire-share/internal/domain/models"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto/commands"
@@ -25,7 +24,7 @@ type Response struct {
 }
 
 type UserRegister interface {
-	Register(ctx context.Context, command commands.RegisterCommand) (*models.TokenPair, error)
+	Register(ctx context.Context, command commands.RegisterCommand) (*entities.TokenPair, error)
 }
 
 func New(register UserRegister, log *slog.Logger) http.HandlerFunc {

@@ -4,28 +4,43 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	repositoryErr "expire-share/internal/domain/errors/repository"
-	"expire-share/internal/domain/models"
+	"expire-share/internal/domain/entities"
+	domainErrors "expire-share/internal/domain/entities/errors"
 	"expire-share/internal/services/dto/repository"
 	"fmt"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
+	"log/slog"
 	"time"
 )
 
+const (
+	duplicateEntryErrCode = 1062
+)
+
 type FileRepo struct {
-	Database *sql.DB
+	DB  *sql.DB
+	log *slog.Logger
 }
 
-func (fr *FileRepo) AddFile(ctx context.Context, command repository.AddFileCommand) (_ int64, err error) {
-	const fn = "repository.mysql.FileRepo.AddFile"
+func NewFileRepo(db *sql.DB, log *slog.Logger) *FileRepo {
+	return &FileRepo{DB: db, log: log}
+}
 
-	stmt, err := fr.Database.PrepareContext(ctx, `INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at, password_hash, user_id) VALUES(?, ?, ?, ?, ?, ?, ?)`)
+func (fr *FileRepo) AddFile(ctx context.Context, command repository.AddFileCommand) (int64, error) {
+	const fn = "repository.mysql.FileRepo.AddFile"
+	log := fr.log.With(slog.String("fn", fn))
+
+	stmt, err := fr.DB.PrepareContext(ctx, `INSERT INTO files(file_path, alias, downloads_left, loaded_at, expires_at, password_hash, user_id) VALUES(?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return 0, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}
 
-	defer stmtClose(stmt, &err)
+	defer func(stmt *sql.Stmt) {
+		if err := stmt.Close(); err != nil {
+			log.Error("%s: failed to close stmt: %w", fn, err)
+		}
+	}(stmt)
 
 	currentTime := time.Now()
 	res, err := stmt.ExecContext(ctx,
@@ -40,7 +55,7 @@ func (fr *FileRepo) AddFile(ctx context.Context, command repository.AddFileComma
 	if err != nil {
 		var mysqlErr *mysql.MySQLError
 		if errors.As(err, &mysqlErr) && mysqlErr.Number == duplicateEntryErrCode {
-			return 0, repositoryErr.ErrAliasExists
+			return 0, domainErrors.ErrAliasExists
 		}
 
 		return 0, fmt.Errorf("%s: failed to exec statement: %w", fn, err)
@@ -54,17 +69,22 @@ func (fr *FileRepo) AddFile(ctx context.Context, command repository.AddFileComma
 	return id, nil
 }
 
-func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (models.File, error) {
+func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (entities.File, error) {
 	const fn = "repository.mysql.FileRepo.GetFileByAlias"
+	log := fr.log.With(slog.String("fn", fn))
 
-	stmt, err := fr.Database.PrepareContext(ctx, `SELECT file_path, alias, downloads_left, loaded_at, expires_at, password_hash FROM files WHERE alias = ? AND expires_at > NOW()`)
+	stmt, err := fr.DB.PrepareContext(ctx, `SELECT file_path, alias, downloads_left, loaded_at, expires_at, password_hash FROM files WHERE alias = ? AND expires_at > NOW()`)
 	if err != nil {
-		return models.File{}, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
+		return entities.File{}, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}
 
-	defer stmtClose(stmt, &err)
+	defer func(stmt *sql.Stmt) {
+		if err := stmt.Close(); err != nil {
+			log.Error("%s: failed to close stmt: %w", fn, err)
+		}
+	}(stmt)
 
-	var file models.File
+	var file entities.File
 	err = stmt.QueryRowContext(ctx, alias).Scan(
 		&file.FilePath,
 		&file.Alias,
@@ -75,10 +95,10 @@ func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (models.Fi
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.File{}, repositoryErr.ErrAliasNotFound
+			return entities.File{}, domainErrors.ErrAliasNotFound
 		}
 
-		return models.File{}, fmt.Errorf("%s: failed to query statement: %w", fn, err)
+		return entities.File{}, fmt.Errorf("%s: failed to query statement: %w", fn, err)
 	}
 
 	return file, nil
@@ -86,8 +106,9 @@ func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (models.Fi
 
 func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string) (int16, error) {
 	const fn = "repository.mysql.FileRepo.DecrementDownloadsByAlias"
+	log := fr.log.With(slog.String("fn", fn))
 
-	tx, err := fr.Database.BeginTx(ctx, nil)
+	tx, err := fr.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", fn, err)
 	}
@@ -106,7 +127,11 @@ func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string)
 		return 0, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}
 
-	defer stmtClose(selectStmt, &err)
+	defer func(stmt *sql.Stmt) {
+		if err := stmt.Close(); err != nil {
+			log.Error("%s: failed to close stmt: %w", fn, err)
+		}
+	}(selectStmt)
 
 	var downloadsLeft int16
 	err = selectStmt.QueryRowContext(ctx, alias).Scan(&downloadsLeft)
@@ -115,7 +140,7 @@ func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string)
 	}
 
 	if downloadsLeft == 0 {
-		return 0, repositoryErr.ErrNoDownloadsLeft
+		return 0, domainErrors.ErrNoDownloadsLeft
 	}
 
 	downloadsLeft--
@@ -124,7 +149,11 @@ func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string)
 		return 0, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}
 
-	defer stmtClose(updateStmt, &err)
+	defer func(stmt *sql.Stmt) {
+		if err := stmt.Close(); err != nil {
+			log.Error("%s: failed to close stmt: %w", fn, err)
+		}
+	}(updateStmt)
 
 	res, err := updateStmt.ExecContext(ctx, downloadsLeft, alias)
 	if err != nil {
@@ -137,21 +166,26 @@ func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string)
 	}
 
 	if rowsAffected == 0 {
-		return 0, repositoryErr.ErrAliasNotFound
+		return 0, domainErrors.ErrAliasNotFound
 	}
 
 	return downloadsLeft, nil
 }
 
-func (fr *FileRepo) DeleteFile(ctx context.Context, alias string) (err error) {
+func (fr *FileRepo) DeleteFile(ctx context.Context, alias string) error {
 	const fn = "repository.mysql.FileRepo.DeleteFile"
+	log := fr.log.With(slog.String("fn", fn))
 
-	stmt, err := fr.Database.PrepareContext(ctx, "DELETE FROM files WHERE alias = ? AND expires_at > NOW()")
+	stmt, err := fr.DB.PrepareContext(ctx, "DELETE FROM files WHERE alias = ? AND expires_at > NOW()")
 	if err != nil {
 		return fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}
 
-	defer stmtClose(stmt, &err)
+	defer func(stmt *sql.Stmt) {
+		if err := stmt.Close(); err != nil {
+			log.Error("%s: failed to close stmt: %w", fn, err)
+		}
+	}(stmt)
 
 	res, err := stmt.ExecContext(ctx, alias)
 	if err != nil {
@@ -164,34 +198,26 @@ func (fr *FileRepo) DeleteFile(ctx context.Context, alias string) (err error) {
 	}
 
 	if rowsAffected == 0 {
-		return repositoryErr.ErrAliasNotFound
+		return domainErrors.ErrAliasNotFound
 	}
 
 	return nil
 }
 
-func (fr *FileRepo) DeleteExpiredFiles(ctx context.Context) (_ []string, err error) {
+func (fr *FileRepo) DeleteExpiredFiles(ctx context.Context) ([]string, error) {
 	const fn = "repository.mysql.FileRepo.DeleteExpiredFiles"
-	tx, err := fr.Database.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", fn, err)
-	}
+	log := fr.log.With(slog.String("fn", fn))
 
-	defer func(tx *sql.Tx) {
-		if err != nil {
-			_ = tx.Rollback()
-			return
-		}
-
-		err = tx.Commit()
-	}(tx)
-
-	selectStmt, err := tx.PrepareContext(ctx, `SELECT alias FROM files WHERE expires_at < NOW() FOR UPDATE`)
+	selectStmt, err := fr.DB.PrepareContext(ctx, `SELECT alias FROM files WHERE expires_at < NOW() FOR UPDATE`)
 	if err != nil {
 		return nil, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}
 
-	defer stmtClose(selectStmt, &err)
+	defer func(stmt *sql.Stmt) {
+		if err := stmt.Close(); err != nil {
+			log.Error("%s: failed to close stmt: %w", fn, err)
+		}
+	}(selectStmt)
 
 	rows, err := selectStmt.QueryContext(ctx)
 	if err != nil {
@@ -199,12 +225,9 @@ func (fr *FileRepo) DeleteExpiredFiles(ctx context.Context) (_ []string, err err
 	}
 
 	defer func(rows *sql.Rows) {
-		if err != nil {
-			_ = rows.Close()
-			return
+		if err := rows.Close(); err != nil {
+			log.Error("%s: failed to close rows: %w", fn, err)
 		}
-
-		err = rows.Close()
 	}(rows)
 
 	var aliases []string
@@ -221,12 +244,16 @@ func (fr *FileRepo) DeleteExpiredFiles(ctx context.Context) (_ []string, err err
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	updateStmt, err := tx.PrepareContext(ctx, `DELETE FROM files WHERE expires_at < NOW()`)
+	updateStmt, err := fr.DB.PrepareContext(ctx, `DELETE FROM files WHERE expires_at < NOW()`)
 	if err != nil {
 		return nil, fmt.Errorf("%s: failed to prepare statement: %w", fn, err)
 	}
 
-	defer stmtClose(updateStmt, &err)
+	defer func(stmt *sql.Stmt) {
+		if err := stmt.Close(); err != nil {
+			log.Error("%s: failed to close stmt: %w", fn, err)
+		}
+	}(updateStmt)
 
 	_, err = updateStmt.ExecContext(ctx)
 	if err != nil {
@@ -234,8 +261,4 @@ func (fr *FileRepo) DeleteExpiredFiles(ctx context.Context) (_ []string, err err
 	}
 
 	return aliases, nil
-}
-
-func NewFileRepo(db *sql.DB) *FileRepo {
-	return &FileRepo{Database: db}
 }

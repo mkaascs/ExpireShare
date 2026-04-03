@@ -10,7 +10,7 @@ import (
 	"expire-share/internal/delivery/http/api/upload"
 	"expire-share/internal/delivery/http/download"
 	myMiddleware "expire-share/internal/delivery/middlewares"
-	repo "expire-share/internal/repository/mysql"
+	repo "expire-share/internal/infrastructure/mysql"
 	"expire-share/internal/services/files"
 	"expire-share/internal/services/worker"
 	"github.com/go-chi/chi/v5"

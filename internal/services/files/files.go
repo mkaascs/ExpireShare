@@ -6,7 +6,6 @@ import (
 	"expire-share/internal/config"
 	"expire-share/internal/domain/errors/repository"
 	"expire-share/internal/domain/errors/services/files"
-	"expire-share/internal/domain/models"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/interfaces"
 	"golang.org/x/crypto/bcrypt"
@@ -37,7 +36,7 @@ func (fs *Service) checkPasswordByAlias(ctx context.Context, alias string, passw
 	return fs.checkPassword(fileInfo, password)
 }
 
-func (fs *Service) checkPassword(fileInfo models.File, password string) error {
+func (fs *Service) checkPassword(fileInfo entities.File, password string) error {
 	if fileInfo.PasswordHash != "" && password == "" {
 		fs.log.Info("password is required for access")
 		return files.ErrPasswordRequired

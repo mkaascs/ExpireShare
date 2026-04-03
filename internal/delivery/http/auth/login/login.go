@@ -3,7 +3,6 @@ package login
 import (
 	"context"
 	"expire-share/internal/delivery/middlewares"
-	"expire-share/internal/domain/models"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto/commands"
@@ -25,7 +24,7 @@ type Response struct {
 }
 
 type UserLogin interface {
-	Login(ctx context.Context, command commands.LoginCommand) (*models.TokenPair, error)
+	Login(ctx context.Context, command commands.LoginCommand) (*entities.TokenPair, error)
 }
 
 func New(login UserLogin, log *slog.Logger) http.HandlerFunc {

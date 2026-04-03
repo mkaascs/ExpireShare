@@ -11,6 +11,7 @@ require (
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/joho/godotenv v1.5.1
+	github.com/mkaascs/AuthProto v1.0.8
 	github.com/swaggo/http-swagger v1.3.4
 	golang.org/x/crypto v0.40.0
 	golang.org/x/sync v0.16.0

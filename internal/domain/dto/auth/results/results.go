@@ -18,7 +18,6 @@ type Register struct {
 }
 
 type Validate struct {
-	Status    entities.TokenStatus
 	UserID    int64
 	Roles     []entities.UserRole
 	ExpiresAt int64
