@@ -27,6 +27,7 @@ func main() {
 	application := app.New(*cfg, logger)
 
 	application.MySql.MustConnect()
+	application.Auth.MustConnect()
 
 	application.MustMountMiddlewares()
 	application.MustMountHandlers()
@@ -40,6 +41,7 @@ func main() {
 	<-stop
 
 	_ = application.MySql.Close()
+	_ = application.Auth.Close()
 	_ = application.HTTP.Shutdown(ctx)
 
 	logger.Info("application expire-share stopped")

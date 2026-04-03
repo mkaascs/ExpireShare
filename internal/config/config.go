@@ -24,6 +24,7 @@ type Config struct {
 	Storage            `yaml:"storage"`
 	HttpServer         `yaml:"http_server"`
 	Service            `yaml:"service"`
+	AuthService        `yaml:"auth_service"`
 }
 
 type Storage struct {
@@ -35,8 +36,12 @@ type Storage struct {
 
 type HttpServer struct {
 	Port        int           `yaml:"port" env-required:"true"`
-	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
+	Timeout     time.Duration `yaml:"timeout" env-default:"5s"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
+}
+
+type AuthService struct {
+	Addr string `yaml:"addr" env-required:"true"`
 }
 
 type Service struct {

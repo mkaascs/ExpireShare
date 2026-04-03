@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"expire-share/internal/app/auth"
 	"expire-share/internal/app/http"
 	"expire-share/internal/app/mysql"
 	"expire-share/internal/config"
@@ -20,14 +21,17 @@ import (
 )
 
 type App struct {
-	HTTP   *http.App
-	MySql  *mysql.App
+	HTTP  *http.App
+	MySql *mysql.App
+	Auth  *auth.App
+
 	config config.Config
 	logger *slog.Logger
 }
 
 func New(config config.Config, logger *slog.Logger) *App {
 	httpApp := http.New(logger, config.HttpServer)
+	authApp := auth.New(logger, config.AuthService)
 
 	mysql.MustMigrate(logger, config.DbConnectionString)
 	mysqlApp, _ := mysql.New(logger, config.DbConnectionString)
@@ -35,6 +39,7 @@ func New(config config.Config, logger *slog.Logger) *App {
 	return &App{
 		HTTP:   httpApp,
 		MySql:  mysqlApp,
+		Auth:   authApp,
 		config: config,
 		logger: logger,
 	}
@@ -49,7 +54,7 @@ func (a *App) MustMountMiddlewares() {
 }
 
 func (a *App) MustMountHandlers() {
-	fileRepo := repo.NewFileRepo(a.MySql.DB)
+	fileRepo := repo.NewFileRepo(a.MySql.DB, a.logger)
 
 	fileService := files.New(fileRepo, a.logger, a.config)
 
@@ -72,7 +77,7 @@ func (a *App) MustMountHandlers() {
 }
 
 func (a *App) StartFileWorker(ctx context.Context) {
-	fileRepo := repo.NewFileRepo(a.MySql.DB)
+	fileRepo := repo.NewFileRepo(a.MySql.DB, a.logger)
 
 	fileWorker := worker.NewFileWorker(fileRepo, a.logger, a.config)
 	fileWorker.Start(ctx)

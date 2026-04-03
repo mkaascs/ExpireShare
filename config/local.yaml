@@ -14,3 +14,5 @@ service:
   alias_length: 6
   file_worker_delay: 5m
   max_file_uploads_per_ip: 5
+auth_service:
+  addr: "localhost:5505"

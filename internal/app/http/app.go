@@ -39,7 +39,7 @@ func New(logger *slog.Logger, cfg config.HttpServer) *App {
 }
 
 func (a *App) MustRun() {
-	const fn = "app.http.App.MustRun"
+	const fn = "app.http.App.MustConnect"
 	if err := a.Run(); err != nil {
 		a.logger.Error("failed to run http server", sl.Error(err), slog.String("fn", fn))
 		os.Exit(1)
@@ -47,7 +47,7 @@ func (a *App) MustRun() {
 }
 
 func (a *App) Run() error {
-	const fn = "app.http.App.Run"
+	const fn = "app.http.App.Connect"
 	log := a.logger.With(slog.String("fn", fn))
 
 	log.Info("http server is running", slog.Int("port", a.port))
@@ -68,7 +68,7 @@ func (a *App) Shutdown(ctx context.Context) error {
 
 	if err := a.server.Shutdown(ctx); err != nil {
 		log.Error("failed to shutdown http server", sl.Error(err))
-		return fmt.Errorf("http server is shutting down: %w", err)
+		return fmt.Errorf("failed to shutdown http server: %w", err)
 	}
 
 	return nil
