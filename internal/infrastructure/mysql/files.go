@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"expire-share/internal/domain/dto/files/commands"
 	"expire-share/internal/domain/entities"
 	domainErrors "expire-share/internal/domain/entities/errors"
-	"expire-share/internal/services/dto/repository"
 	"fmt"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
@@ -27,7 +27,7 @@ func NewFileRepo(db *sql.DB, log *slog.Logger) *FileRepo {
 	return &FileRepo{DB: db, log: log}
 }
 
-func (fr *FileRepo) AddFile(ctx context.Context, command repository.AddFileCommand) (int64, error) {
+func (fr *FileRepo) AddFile(ctx context.Context, command commands.AddFile) (int64, error) {
 	const fn = "repository.mysql.FileRepo.AddFile"
 	log := fr.log.With(slog.String("fn", fn))
 
@@ -50,7 +50,7 @@ func (fr *FileRepo) AddFile(ctx context.Context, command repository.AddFileComma
 		currentTime,
 		currentTime.Add(command.TTL),
 		command.PasswordHash,
-		command.UserId)
+		command.UserID)
 
 	if err != nil {
 		var mysqlErr *mysql.MySQLError

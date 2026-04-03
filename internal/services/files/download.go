@@ -3,26 +3,25 @@ package files
 import (
 	"context"
 	"errors"
-	"expire-share/internal/domain/errors/repository"
-	"expire-share/internal/domain/errors/services/files"
+	"expire-share/internal/domain/dto/files/commands"
+	"expire-share/internal/domain/dto/files/results"
+	domainErrors "expire-share/internal/domain/entities/errors"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services/dto/commands"
-	"expire-share/internal/services/dto/results"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 )
 
-func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFileCommand) (*results.DownloadFileResult, error) {
+func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFile) (*results.DownloadFile, error) {
 	const fn = "services.files.Service.DownloadFile"
 	fs.log = slog.With(slog.String("fn", fn))
 
 	fileInfo, err := fs.fileRepo.GetFileByAlias(ctx, command.Alias)
 	if err != nil {
-		if errors.Is(err, repository.ErrAliasNotFound) {
+		if errors.Is(err, domainErrors.ErrAliasNotFound) {
 			fs.log.Info("failed to get file info", sl.Error(err))
-			return nil, files.ErrAliasNotFound
+			return nil, domainErrors.ErrAliasNotFound
 		}
 
 		fs.log.Error("failed to get file info", sl.Error(err))
@@ -37,9 +36,9 @@ func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFi
 
 	downloadsLeft, err := fs.fileRepo.DecrementDownloadsByAlias(ctx, command.Alias)
 	if err != nil {
-		if errors.Is(err, repository.ErrAliasNotFound) {
+		if errors.Is(err, domainErrors.ErrAliasNotFound) {
 			fs.log.Info("failed decrement downloads left", sl.Error(err))
-			return nil, files.ErrAliasNotFound
+			return nil, domainErrors.ErrAliasNotFound
 		}
 
 		fs.log.Error("failed to decrement downloads left", sl.Error(err))
@@ -71,7 +70,7 @@ func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFi
 	}
 
 	if downloadsLeft > 0 {
-		res := results.DownloadFileResult{
+		res := results.DownloadFile{
 			File:     file,
 			FileInfo: stat,
 			Close:    closeFunc,
@@ -101,7 +100,7 @@ func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFi
 		return nil
 	}
 
-	res := results.DownloadFileResult{
+	res := results.DownloadFile{
 		File:     file,
 		FileInfo: stat,
 		Close:    closeAndDeleteFunc,

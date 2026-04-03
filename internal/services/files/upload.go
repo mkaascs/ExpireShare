@@ -2,12 +2,11 @@ package files
 
 import (
 	"context"
-	"expire-share/internal/domain/errors/services/files"
+	"expire-share/internal/domain/dto/files/commands"
+	domainErrors "expire-share/internal/domain/entities/errors"
 	"expire-share/internal/lib/alias"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/lib/sizes"
-	"expire-share/internal/services/dto/commands"
-	"expire-share/internal/services/dto/repository"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"io"
@@ -16,7 +15,7 @@ import (
 	"path/filepath"
 )
 
-func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFileCommand) (_ string, err error) {
+func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFile) (string, error) {
 	const fn = "services.file.Service.UploadFile"
 	fs.log = slog.With(slog.String("fn", fn))
 
@@ -24,7 +23,8 @@ func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFileCo
 		fs.log.Info("file size too big",
 			slog.String("file_size", sizes.ToFormattedString(command.FileSize)),
 			slog.String("max_file_size", fs.cfg.MaxFileSize))
-		return "", fmt.Errorf("%s: %w - max file size %s", fn, files.ErrFileSizeTooBig, fs.cfg.MaxFileSize)
+
+		return "", fmt.Errorf("%s: %w - max file size %s", fn, domainErrors.ErrFileSizeTooBig, fs.cfg.MaxFileSize)
 	}
 
 	newAlias := alias.Gen(fs.cfg.AliasLength)
@@ -44,12 +44,10 @@ func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFileCo
 	}
 
 	defer func(file *os.File) {
-		if err != nil {
-			_ = file.Close()
-			return
+		if err := file.Close(); err != nil {
+			fs.log.Error("failed to close file", sl.Error(err))
 		}
 
-		err = file.Close()
 	}(uploadedFile)
 
 	if _, err := io.Copy(uploadedFile, command.File); err != nil {
@@ -66,13 +64,13 @@ func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFileCo
 		}
 	}
 
-	addFileCommand := repository.AddFileCommand{
+	addFileCommand := commands.AddFile{
 		FilePath:     filepath.Join(newAlias, command.Filename),
 		Alias:        newAlias,
 		MaxDownloads: command.MaxDownloads,
 		TTL:          command.TTL,
 		PasswordHash: string(hashedBytes),
-		UserId:       command.UserId,
+		UserID:       command.UserID,
 	}
 
 	_, err = fs.fileRepo.AddFile(ctx, addFileCommand)
