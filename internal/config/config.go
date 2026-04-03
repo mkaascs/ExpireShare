@@ -7,54 +7,48 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 )
 
 const (
-	EnvironmentLocal = "local"
-	EnvironmentDev   = "dev"
-	EnvironmentProd  = "prod"
+	EnvLocal = "local"
+	EnvDev   = "dev"
+	EnvProd  = "prod"
 )
 
 type Config struct {
-	Environment      string `yaml:"environment" default:"local"`
-	ConnectionString string `yaml:"connection_string" required:"true"`
-	Storage          `yaml:"storage"`
-	HttpServer       `yaml:"http_server"`
-	Service          `yaml:"service"`
-	Auth             `yaml:"auth"`
+	Env                string `yaml:"env" env-default:"local"`
+	DbHost             string `yaml:"db_host" env-required:"true"`
+	DbPassword         string `yaml:"-" env:"MYSQL_ROOT_PASSWORD" env-required:"true"`
+	DbConnectionString string `yaml:"-"`
+	Storage            `yaml:"storage"`
+	HttpServer         `yaml:"http_server"`
+	Service            `yaml:"service"`
 }
 
 type Storage struct {
-	Type               string `yaml:"type" default:"local"`
-	Path               string `yaml:"path" required:"true"`
-	MaxFileSize        string `yaml:"max_file_size" default:"100mb"`
+	Type               string `yaml:"type" env-default:"local"`
+	Path               string `yaml:"path" env-required:"true"`
+	MaxFileSize        string `yaml:"max_file_size" env-default:"100mb"`
 	MaxFileSizeInBytes int64
 }
 
 type HttpServer struct {
-	Address     string        `yaml:"address" required:"true"`
-	Timeout     time.Duration `yaml:"timeout" default:"4s"`
-	IdleTimeout time.Duration `yaml:"idle_timeout" default:"60s"`
+	Port        int           `yaml:"port" env-required:"true"`
+	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
+	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 }
 
 type Service struct {
-	DefaultTtl          time.Duration `yaml:"default_ttl" default:"1h"`
-	MaxDownloads        int16         `yaml:"default_max_downloads" default:"1"`
-	AliasLength         int16         `yaml:"alias_length" default:"6"`
-	FileWorkerDelay     time.Duration `yaml:"file_worker_delay" default:"5m"`
-	MaxFileUploadsPerIP int16         `yaml:"max_file_uploads_per_ip" default:"5"`
+	DefaultTtl          time.Duration `yaml:"default_ttl" env-default:"1h"`
+	MaxDownloads        int16         `yaml:"default_max_downloads" env-default:"1"`
+	AliasLength         int16         `yaml:"alias_length" env-default:"6"`
+	FileWorkerDelay     time.Duration `yaml:"file_worker_delay" env-default:"5m"`
+	MaxFileUploadsPerIP int16         `yaml:"max_file_uploads_per_ip" env-default:"5"`
 }
 
-type Auth struct {
-	AccessTokenTtl  time.Duration `yaml:"access_token_ttl" default:"30m"`
-	RefreshTokenTtl time.Duration `yaml:"refresh_token_ttl" default:"30d"`
-	Issuer          string        `yaml:"issuer" required:"true"`
-}
-
-func MustLoad(envPath string) *Config {
-	cfg, err := Load(envPath)
+func MustLoad() *Config {
+	cfg, err := Load()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,11 +56,8 @@ func MustLoad(envPath string) *Config {
 	return cfg
 }
 
-func Load(envPath string) (*Config, error) {
-	path := filepath.Join(envPath, ".env")
-	if err := godotenv.Load(path); err != nil {
-		return nil, fmt.Errorf("failed to load .env file: %w", err)
-	}
+func Load() (*Config, error) {
+	_ = godotenv.Load()
 
 	cfgPath := os.Getenv("CONFIG_PATH")
 	if cfgPath == "" {
@@ -88,5 +79,10 @@ func Load(envPath string) (*Config, error) {
 	}
 
 	cfg.MaxFileSizeInBytes = bytes
+	cfg.DbConnectionString = fmt.Sprintf(
+		"root:%s@tcp(%s)/ExpireShare?charset=utf8&parseTime=True",
+		cfg.DbPassword,
+		cfg.DbHost)
+
 	return &cfg, nil
 }
