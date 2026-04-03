@@ -2,8 +2,7 @@ package response
 
 import (
 	"errors"
-	"expire-share/internal/domain/errors/services/auth"
-	"expire-share/internal/domain/errors/services/files"
+	domainErrors "expire-share/internal/domain/entities/errors"
 	"fmt"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
@@ -48,28 +47,28 @@ func RenderValidationError(w http.ResponseWriter, r *http.Request, errors valida
 }
 
 func RenderFileServiceError(w http.ResponseWriter, r *http.Request, err error) bool {
-	if errors.Is(err, files.ErrAliasNotFound) {
+	if errors.Is(err, domainErrors.ErrAliasNotFound) {
 		RenderError(w, r,
 			http.StatusNotFound,
 			"file with current alias not found")
 		return true
 	}
 
-	if errors.Is(err, files.ErrPasswordRequired) {
+	if errors.Is(err, domainErrors.ErrFilePasswordRequired) {
 		RenderError(w, r,
 			http.StatusUnauthorized,
 			"password is required")
 		return true
 	}
 
-	if errors.Is(err, files.ErrIncorrectPassword) {
+	if errors.Is(err, domainErrors.ErrFilePasswordInvalid) {
 		RenderError(w, r,
 			http.StatusForbidden,
 			"incorrect password")
 		return true
 	}
 
-	if errors.Is(err, files.ErrFileSizeTooBig) {
+	if errors.Is(err, domainErrors.ErrFileSizeTooBig) {
 		RenderError(w, r,
 			http.StatusUnprocessableEntity,
 			"file size is very big")
@@ -80,31 +79,24 @@ func RenderFileServiceError(w http.ResponseWriter, r *http.Request, err error) b
 }
 
 func RenderUserServiceError(w http.ResponseWriter, r *http.Request, err error) bool {
-	if errors.Is(err, auth.ErrUserAlreadyExists) {
+	if errors.Is(err, domainErrors.ErrUserAlreadyExists) {
 		RenderError(w, r,
 			http.StatusConflict,
 			"user with this login already exists")
 		return true
 	}
 
-	if errors.Is(err, auth.ErrInvalidPassword) || errors.Is(err, auth.ErrUserNotFound) {
+	if errors.Is(err, domainErrors.ErrInvalidCredentials) {
 		RenderError(w, r,
 			http.StatusUnauthorized,
 			"login or password is invalid")
 		return true
 	}
 
-	if errors.Is(err, auth.ErrTokenNotFound) {
+	if errors.Is(err, domainErrors.ErrInvalidRefreshToken) {
 		RenderError(w, r,
 			http.StatusUnauthorized,
 			"refresh token is invalid")
-		return true
-	}
-
-	if errors.Is(err, auth.ErrTokenExpired) {
-		RenderError(w, r,
-			http.StatusUnauthorized,
-			"refresh token is expired. try to login")
 		return true
 	}
 
