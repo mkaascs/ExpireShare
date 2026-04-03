@@ -3,83 +3,56 @@ package main
 import (
 	"database/sql"
 	"expire-share/internal/config"
-	pkgLog "expire-share/internal/lib/log"
-	"expire-share/internal/lib/log/sl"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate"
-	mysqlMigrate "github.com/golang-migrate/migrate/database/mysql"
 	_ "github.com/golang-migrate/migrate/source/file"
 	"log"
 	"os"
 )
 
 func main() {
-	migrateFunc := map[string]func(*migrate.Migrate) error{
-		"up": func(mgr *migrate.Migrate) error {
-			return mgr.Up()
-		},
-		"down": func(mgr *migrate.Migrate) error {
-			return mgr.Down()
-		},
-	}
-
-	cfg := config.MustLoad("")
-	lg, err := pkgLog.Load(cfg.Environment)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	if len(os.Args) < 2 {
 		log.Fatal("usage: migrate [up/down]")
 	}
 
+	cfg := config.MustLoad()
+
 	cmd := os.Args[1]
 
-	db, err := sql.Open("mysql", cfg.ConnectionString)
+	db, err := sql.Open("mysql", cfg.DbConnectionString)
 	if err != nil {
-		lg.Error("failed to open database", sl.Error(err))
-		os.Exit(1)
+		log.Fatalf("failed to open database: %v", err)
 	}
 
 	defer func(db *sql.DB) {
-		err := db.Close()
-		if err != nil {
-			lg.Error("failed to close database", sl.Error(err))
+		if err := db.Close(); err != nil {
+			log.Fatalf("failed to close database: %v", err)
 		}
 	}(db)
 
 	if err := db.Ping(); err != nil {
-		lg.Error("failed to ping database", sl.Error(err))
-		os.Exit(1)
+		log.Fatalf("failed to ping database: %v", err)
 	}
 
-	driver, err := mysqlMigrate.WithInstance(db, &mysqlMigrate.Config{})
+	mgr, err := migrate.New("file://migrations", "mysql://"+cfg.DbConnectionString)
 	if err != nil {
-		lg.Error("failed to create database driver", sl.Error(err))
-		os.Exit(1)
+		log.Fatalf("failed to init migrator: %v", err)
 	}
 
-	mgr, err := migrate.NewWithDatabaseInstance(
-		"file://migrations",
-		"mysql",
-		driver)
-
-	if err != nil {
-		lg.Error("failed to create migration instance", sl.Error(err))
-		os.Exit(1)
+	operations := map[string]func() error{
+		"up":   mgr.Up,
+		"down": mgr.Down,
 	}
 
-	fn, ok := migrateFunc[cmd]
+	fn, ok := operations[cmd]
 	if !ok {
-		lg.Error(fmt.Sprintf("unknown command: %s", cmd))
-		os.Exit(1)
+		log.Fatalf(fmt.Sprintf("unknown command: %s", cmd))
 	}
 
-	if err := fn(mgr); err != nil {
-		lg.Error("failed to migrate table", sl.Error(err))
-		os.Exit(1)
+	if err := fn(); err != nil {
+		log.Fatalf("failed to migrate table: %v", err)
 	}
 
-	lg.Info(fmt.Sprintf("migrate %s finished successfully", cmd))
+	fmt.Println("migration complete")
 }

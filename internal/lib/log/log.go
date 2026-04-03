@@ -8,8 +8,8 @@ import (
 	"os"
 )
 
-func MustLoad(environment string) *slog.Logger {
-	lg, err := Load(environment)
+func MustLoad(env string) *slog.Logger {
+	lg, err := Load(env)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -21,15 +21,15 @@ func Load(environment string) (*slog.Logger, error) {
 	var lg *slog.Logger
 
 	switch environment {
-	case config.EnvironmentLocal:
+	case config.EnvLocal:
 		lg = slog.New(slog.NewTextHandler(
 			os.Stdout,
 			&slog.HandlerOptions{Level: slog.LevelDebug}))
-	case config.EnvironmentDev:
+	case config.EnvDev:
 		lg = slog.New(slog.NewJSONHandler(
 			os.Stdout,
 			&slog.HandlerOptions{Level: slog.LevelDebug}))
-	case config.EnvironmentProd:
+	case config.EnvProd:
 		lg = slog.New(slog.NewJSONHandler(
 			os.Stdout,
 			&slog.HandlerOptions{Level: slog.LevelInfo}))
