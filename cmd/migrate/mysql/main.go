@@ -20,12 +20,12 @@ func main() {
 			return mgr.Up()
 		},
 		"down": func(mgr *migrate.Migrate) error {
-			return mgr.Steps(-1)
+			return mgr.Down()
 		},
 	}
 
 	cfg := config.MustLoad("")
-	lg, err := pkgLog.New(cfg.Environment)
+	lg, err := pkgLog.Load(cfg.Environment)
 	if err != nil {
 		log.Fatal(err)
 	}
