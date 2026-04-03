@@ -1,4 +1,4 @@
-package models
+package entities
 
 import "time"
 
@@ -9,5 +9,5 @@ type File struct {
 	PasswordHash  string
 	LoadedAt      time.Time
 	ExpiresAt     time.Time
-	UserId        int64
+	UserID        int64
 }

@@ -1,0 +1,19 @@
+package entities
+
+import "time"
+
+const (
+	Client = "user"
+	Vip    = "vip"
+	Admin  = "admin"
+)
+
+type UserRole string
+
+type User struct {
+	ID        int64
+	Login     string
+	Roles     []UserRole
+	IsAdmin   bool
+	CreatedAt time.Time
+}

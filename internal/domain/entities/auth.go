@@ -1,12 +1,14 @@
-package models
+package entities
 
-import "time"
+const (
+	_ TokenStatus = iota
+	Valid
+	Expired
+	Invalid
+	Revoked
+)
 
-type Token struct {
-	UserId    int64
-	Hash      string
-	ExpiresAt time.Time
-}
+type TokenStatus int
 
 type TokenPair struct {
 	AccessToken  string `json:"access_token"`
