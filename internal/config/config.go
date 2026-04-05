@@ -45,11 +45,16 @@ type AuthService struct {
 }
 
 type Service struct {
-	DefaultTtl          time.Duration `yaml:"default_ttl" env-default:"1h"`
-	MaxDownloads        int16         `yaml:"default_max_downloads" env-default:"1"`
-	AliasLength         int16         `yaml:"alias_length" env-default:"6"`
-	FileWorkerDelay     time.Duration `yaml:"file_worker_delay" env-default:"5m"`
-	MaxFileUploadsPerIP int16         `yaml:"max_file_uploads_per_ip" env-default:"5"`
+	DefaultTtl      time.Duration `yaml:"default_ttl" env-default:"1h"`
+	MaxDownloads    int16         `yaml:"default_max_downloads" env-default:"1"`
+	AliasLength     int16         `yaml:"alias_length" env-default:"6"`
+	FileWorkerDelay time.Duration `yaml:"file_worker_delay" env-default:"5m"`
+	Permissions     `yaml:"permissions"`
+}
+
+type Permissions struct {
+	MaxUploadedFileForVip  int `yaml:"max_uploaded_file_for_vip" env-default:"10"`
+	MaxUploadedFileForUser int `yaml:"max_uploaded_file_for_user" env-default:"1"`
 }
 
 func MustLoad() *Config {

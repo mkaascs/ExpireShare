@@ -13,6 +13,8 @@ service:
   default_max_downloads: 1
   alias_length: 6
   file_worker_delay: 5m
-  max_file_uploads_per_ip: 5
+  permissions:
+    max_uploaded_files_for_vip: 10
+    max_uploaded_files_for_user: 1
 auth_service:
   addr: "localhost:5505"
