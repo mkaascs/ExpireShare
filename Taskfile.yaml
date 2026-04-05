@@ -1,0 +1,33 @@
+version: "3"
+
+tasks:
+  default:
+    desc: "Commands list"
+    cmds:
+      - task --list --color
+  mocks:
+    desc: "Generating all mocks from domain interfaces"
+    cmds:
+      - ./scripts/gen_mocks.sh
+  test:
+    desc: "Run all tests"
+    cmds:
+      - go test -v -coverprofile=coverage.out ./...
+  test:cover:
+    desc: "Run all test and open coverage report"
+    cmds:
+      - task test
+      - go tool cover -html=coverage.out -o coverage.html
+  migrate:up:
+    desc: "Up db migrations"
+    cmds:
+      - go run ./cmd/migrate/main.go up
+  migrate:down:
+    desc: "Down db migrations"
+    cmds:
+      - go run ./cmd/migrate/main.go down
+  docs:swagger:
+    desc: "Generate swagger documentation"
+    cmds:
+      - swag fmt
+      - swag init -g cmd/expire-share/main.go -o ./docs
