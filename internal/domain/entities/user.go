@@ -3,9 +3,9 @@ package entities
 import "time"
 
 const (
-	Client = "user"
-	Vip    = "vip"
-	Admin  = "admin"
+	RoleUser  = "user"
+	RoleVip   = "vip"
+	RoleAdmin = "admin"
 )
 
 type UserRole string

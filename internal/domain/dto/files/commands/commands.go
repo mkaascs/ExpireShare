@@ -1,9 +1,15 @@
 package commands
 
 import (
+	"expire-share/internal/domain/entities"
 	"io"
 	"time"
 )
+
+type RequestingUserInfo struct {
+	UserID int64
+	Roles  []entities.UserRole
+}
 
 type UploadFile struct {
 	File         io.Reader
@@ -12,7 +18,7 @@ type UploadFile struct {
 	MaxDownloads int16
 	Password     string
 	TTL          time.Duration
-	UserID       int64
+	RequestingUserInfo
 }
 
 type DownloadFile struct {
@@ -23,11 +29,13 @@ type DownloadFile struct {
 type GetFile struct {
 	Alias    string
 	Password string
+	RequestingUserInfo
 }
 
 type DeleteFile struct {
 	Alias    string
 	Password string
+	RequestingUserInfo
 }
 
 type AddFile struct {

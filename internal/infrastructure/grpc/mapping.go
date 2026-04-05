@@ -4,6 +4,7 @@ import (
 	"context"
 	"expire-share/internal/domain/entities"
 	domainErrors "expire-share/internal/domain/entities/errors"
+
 	authv1 "github.com/mkaascs/AuthProto/gen/go/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

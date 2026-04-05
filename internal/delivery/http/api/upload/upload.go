@@ -8,15 +8,16 @@ import (
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto/commands"
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/jwtauth"
-	"github.com/go-chi/render"
-	"github.com/go-playground/validator/v10"
 	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/jwtauth"
+	"github.com/go-chi/render"
+	"github.com/go-playground/validator/v10"
 )
 
 type Request struct {
@@ -37,16 +38,17 @@ type FileUploader interface {
 var validate *validator.Validate
 
 // New @Summary Upload file
-// @Description Uploads file on server
-// @Tags file
-// @Accept multipart/json
-// @Produce json
-// @Param request body Request true "File data"
-// @Success 201 {object} Response
-// @Failure 400 {object} Response
-// @Failure 422 {object} Response
-// @Failure 500 {object} Response
-// @Router /upload [post]
+//
+//	@Description	Uploads file on server
+//	@Tags			file
+//	@Accept			multipart/json
+//	@Produce		json
+//	@Param			request	body		Request	true	"File data"
+//	@Success		201		{object}	Response
+//	@Failure		400		{object}	Response
+//	@Failure		422		{object}	Response
+//	@Failure		500		{object}	Response
+//	@Router			/upload [post]
 func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.HandlerFunc {
 	validate = validator.New()
 	return func(w http.ResponseWriter, r *http.Request) {

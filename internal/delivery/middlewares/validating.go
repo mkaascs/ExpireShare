@@ -4,9 +4,10 @@ import (
 	"errors"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
-	"github.com/go-playground/validator/v10"
 	"log/slog"
 	"net/http"
+
+	"github.com/go-playground/validator/v10"
 )
 
 func NewValidator[T any](log *slog.Logger) func(http.Handler) http.Handler {

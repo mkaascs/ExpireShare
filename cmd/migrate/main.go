@@ -4,11 +4,12 @@ import (
 	"database/sql"
 	"expire-share/internal/config"
 	"fmt"
+	"log"
+	"os"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate"
 	_ "github.com/golang-migrate/migrate/source/file"
-	"log"
-	"os"
 )
 
 func main() {

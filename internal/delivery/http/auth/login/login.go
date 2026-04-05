@@ -3,13 +3,15 @@ package login
 import (
 	"context"
 	"expire-share/internal/delivery/middlewares"
+	"expire-share/internal/domain/entities"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
 	"expire-share/internal/services/dto/commands"
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/render"
 	"log/slog"
 	"net/http"
+
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/render"
 )
 
 type Request struct {

@@ -7,11 +7,12 @@ import (
 	"expire-share/internal/services/dto/commands"
 	"expire-share/internal/services/dto/results"
 	"fmt"
+	"log/slog"
+	"net/http"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
-	"log/slog"
-	"net/http"
 )
 
 type Response struct {
@@ -25,17 +26,18 @@ type FileGetter interface {
 }
 
 // New @Summary Get file info
-// @Description Get info about uploaded file by its alias
-// @Tags file
-// @Accept json
-// @Produce json
-// @Success 200 {object} Response
-// @Failure 400 {object} Response
-// @Failure 401 {object} Response
-// @Failure 403 {object} Response
-// @Failure 404 {object} Response
-// @Failure 500 {object} Response
-// @Router /file [get]
+//
+//	@Description	Get info about uploaded file by its alias
+//	@Tags			file
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	Response
+//	@Failure		400	{object}	Response
+//	@Failure		401	{object}	Response
+//	@Failure		403	{object}	Response
+//	@Failure		404	{object}	Response
+//	@Failure		500	{object}	Response
+//	@Router			/file [get]
 func New(getter FileGetter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.file.api.get.New"

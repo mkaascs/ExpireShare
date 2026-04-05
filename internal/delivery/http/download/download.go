@@ -8,14 +8,15 @@ import (
 	"expire-share/internal/services/dto/commands"
 	"expire-share/internal/services/dto/results"
 	"fmt"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
 	"io"
 	"log/slog"
 	"mime"
 	"net/http"
 	"path/filepath"
 	"syscall"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 )
 
 type Response struct {
@@ -27,18 +28,19 @@ type FileDownloader interface {
 }
 
 // New @Summary Download file
-// @Description Downloads uploaded file by its alias
-// @Tags file
-// @Accept json
-// @Produce json
-// @Param request body Request true "File data"
-// @Success 200
-// @Failure 400 {object} Response
-// @Failure 401 {object} Response
-// @Failure 403 {object} Response
-// @Failure 404 {object} Response
-// @Failure 500 {object} Response
-// @Router /download [get]
+//
+//	@Description	Downloads uploaded file by its alias
+//	@Tags			file
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body	Request	true	"File data"
+//	@Success		200
+//	@Failure		400	{object}	Response
+//	@Failure		401	{object}	Response
+//	@Failure		403	{object}	Response
+//	@Failure		404	{object}	Response
+//	@Failure		500	{object}	Response
+//	@Router			/download [get]
 func New(downloader FileDownloader, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.download.New"

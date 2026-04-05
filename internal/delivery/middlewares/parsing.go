@@ -4,9 +4,10 @@ import (
 	"context"
 	"expire-share/internal/lib/api/response"
 	"expire-share/internal/lib/log/sl"
-	"github.com/go-chi/render"
 	"log/slog"
 	"net/http"
+
+	"github.com/go-chi/render"
 )
 
 const (

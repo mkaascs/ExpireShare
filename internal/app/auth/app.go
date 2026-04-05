@@ -5,10 +5,11 @@ import (
 	"expire-share/internal/config"
 	"expire-share/internal/lib/log/sl"
 	"fmt"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"log/slog"
 	"os"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type App struct {

@@ -14,22 +14,29 @@ import (
 
 func (fs *Service) DeleteFile(ctx context.Context, command commands.DeleteFile) error {
 	const fn = "services.files.Service.DeleteFile"
-	fs.log = slog.With(slog.String("fn", fn))
+	log := fs.log.With(slog.String("fn", fn))
 
-	err := fs.checkPasswordByAlias(ctx, command.Alias, command.Password)
+	fileInfo, err := fs.fileRepo.GetFileByAlias(ctx, command.Alias)
 	if err != nil {
-		fs.log.Info("failed to check password", sl.Error(err))
-		return fmt.Errorf("%s: failed to check password: %w", fn, err)
+		const msg = "failed to get file by alias"
+		if errors.Is(err, domainErrors.ErrFileNotFound) {
+			log.Info(msg, sl.Error(err), slog.String("alias", command.Alias))
+			return domainErrors.ErrFileNotFound
+		}
+
+		log.Error(msg, sl.Error(err), slog.String("alias", command.Alias))
+		return fmt.Errorf("%s: %s: %w", fn, msg, err)
+	}
+
+	err = fs.checkAccess(fileInfo, command.UserID, command.Roles, command.Password)
+	if err != nil {
+		log.Info("access denied", sl.Error(err), slog.Int64("requesting_user_id", command.UserID), slog.String("alias", command.Alias))
+		return fmt.Errorf("%s: access denied: %w", fn, err)
 	}
 
 	err = fs.fileRepo.DeleteFile(ctx, command.Alias)
 	if err != nil {
-		if errors.Is(err, domainErrors.ErrAliasNotFound) {
-			fs.log.Info("failed to delete file info", sl.Error(err))
-			return domainErrors.ErrAliasNotFound
-		}
-
-		fs.log.Error("failed to delete file info", sl.Error(err))
+		log.Error("failed to delete file info", sl.Error(err))
 		return fmt.Errorf("%s: failed to delete file info: %w", fn, err)
 	}
 

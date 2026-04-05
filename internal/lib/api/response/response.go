@@ -4,9 +4,10 @@ import (
 	"errors"
 	domainErrors "expire-share/internal/domain/entities/errors"
 	"fmt"
+	"net/http"
+
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
-	"net/http"
 )
 
 type Response struct {
@@ -47,7 +48,7 @@ func RenderValidationError(w http.ResponseWriter, r *http.Request, errors valida
 }
 
 func RenderFileServiceError(w http.ResponseWriter, r *http.Request, err error) bool {
-	if errors.Is(err, domainErrors.ErrAliasNotFound) {
+	if errors.Is(err, domainErrors.ErrFileNotFound) {
 		RenderError(w, r,
 			http.StatusNotFound,
 			"file with current alias not found")

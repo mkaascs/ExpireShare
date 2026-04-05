@@ -8,10 +8,11 @@ import (
 	"expire-share/internal/domain/entities"
 	domainErrors "expire-share/internal/domain/entities/errors"
 	"fmt"
-	"github.com/go-sql-driver/mysql"
-	_ "github.com/go-sql-driver/mysql"
 	"log/slog"
 	"time"
+
+	"github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const (
@@ -55,7 +56,7 @@ func (fr *FileRepo) AddFile(ctx context.Context, command commands.AddFile) (int6
 	if err != nil {
 		var mysqlErr *mysql.MySQLError
 		if errors.As(err, &mysqlErr) && mysqlErr.Number == duplicateEntryErrCode {
-			return 0, domainErrors.ErrAliasExists
+			return 0, domainErrors.ErrAliasTaken
 		}
 
 		return 0, fmt.Errorf("%s: failed to exec statement: %w", fn, err)
@@ -95,7 +96,7 @@ func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (entities.
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return entities.File{}, domainErrors.ErrAliasNotFound
+			return entities.File{}, domainErrors.ErrFileNotFound
 		}
 
 		return entities.File{}, fmt.Errorf("%s: failed to query statement: %w", fn, err)
@@ -166,7 +167,7 @@ func (fr *FileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string)
 	}
 
 	if rowsAffected == 0 {
-		return 0, domainErrors.ErrAliasNotFound
+		return 0, domainErrors.ErrFileNotFound
 	}
 
 	return downloadsLeft, nil
@@ -198,7 +199,7 @@ func (fr *FileRepo) DeleteFile(ctx context.Context, alias string) error {
 	}
 
 	if rowsAffected == 0 {
-		return domainErrors.ErrAliasNotFound
+		return domainErrors.ErrFileNotFound
 	}
 
 	return nil

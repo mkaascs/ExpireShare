@@ -1,8 +1,8 @@
 package main
 
-// @title Expire Share API
-// @version 1.0
-// @description A self-destructing file-sharing service with TTL and download limits
+//	@title			Expire Share API
+//	@version		1.0
+//	@description	A self-destructing file-sharing service with TTL and download limits
 
 import (
 	"context"

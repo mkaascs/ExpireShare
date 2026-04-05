@@ -15,54 +15,59 @@ import (
 
 func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFile) (*results.DownloadFile, error) {
 	const fn = "services.files.Service.DownloadFile"
-	fs.log = slog.With(slog.String("fn", fn))
+	log := fs.log.With(slog.String("fn", fn))
 
 	fileInfo, err := fs.fileRepo.GetFileByAlias(ctx, command.Alias)
 	if err != nil {
-		if errors.Is(err, domainErrors.ErrAliasNotFound) {
-			fs.log.Info("failed to get file info", sl.Error(err))
-			return nil, domainErrors.ErrAliasNotFound
+		const msg = "failed to get file by alias"
+		if errors.Is(err, domainErrors.ErrFileNotFound) {
+			log.Info(msg, sl.Error(err), slog.String("alias", command.Alias))
+			return nil, domainErrors.ErrFileNotFound
 		}
 
-		fs.log.Error("failed to get file info", sl.Error(err))
-		return nil, fmt.Errorf("%s: failed to get file info: %w", fn, err)
+		log.Error(msg, sl.Error(err), slog.String("alias", command.Alias))
+		return nil, fmt.Errorf("%s: %s: %w", fn, msg, err)
 	}
 
 	err = fs.checkPassword(fileInfo, command.Password)
 	if err != nil {
-		fs.log.Info("failed to check password", sl.Error(err))
-		return nil, fmt.Errorf("%s: failed to check password: %w", fn, err)
+		log.Info("access denied", sl.Error(err), slog.String("alias", command.Alias))
+		return nil, fmt.Errorf("%s: access denied: %w", fn, err)
 	}
 
 	downloadsLeft, err := fs.fileRepo.DecrementDownloadsByAlias(ctx, command.Alias)
 	if err != nil {
-		if errors.Is(err, domainErrors.ErrAliasNotFound) {
-			fs.log.Info("failed decrement downloads left", sl.Error(err))
-			return nil, domainErrors.ErrAliasNotFound
-		}
-
-		fs.log.Error("failed to decrement downloads left", sl.Error(err))
+		log.Error("failed to decrement downloads left", sl.Error(err))
 		return nil, fmt.Errorf("%s: failed to decrement downloads left: %w", fn, err)
+	}
+
+	if downloadsLeft == 0 {
+		defer func() {
+			err = fs.fileRepo.DeleteFile(ctx, command.Alias)
+			if err != nil {
+				log.Error("failed to delete file from repository", sl.Error(err))
+			}
+		}()
 	}
 
 	filePath := filepath.Join(fs.cfg.Path, fileInfo.FilePath)
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		fs.log.Error("failed to open file", sl.Error(err))
+		log.Error("failed to open file", sl.Error(err))
 		return nil, fmt.Errorf("%s: failed to open file: %w", fn, err)
 	}
 
 	stat, err := file.Stat()
 	if err != nil {
-		fs.log.Error("failed to stat file", sl.Error(err))
+		log.Error("failed to stat file", sl.Error(err))
 		return nil, fmt.Errorf("%s: failed to stat file: %w", fn, err)
 	}
 
 	closeFunc := func() error {
 		err := file.Close()
 		if err != nil {
-			fs.log.Error("failed to close file", sl.Error(err))
+			log.Error("failed to close file", sl.Error(err))
 			return fmt.Errorf("%s: failed to close file: %w", fn, err)
 		}
 
@@ -87,14 +92,8 @@ func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFi
 
 		err = os.RemoveAll(filepath.Join(fs.cfg.Path, command.Alias))
 		if err != nil {
-			fs.log.Error("failed to remove file", sl.Error(err))
+			log.Error("failed to remove file", sl.Error(err))
 			return fmt.Errorf("%s: failed to remove file: %w", fn, err)
-		}
-
-		err = fs.fileRepo.DeleteFile(ctx, command.Alias)
-		if err != nil {
-			fs.log.Error("failed to delete file from repository", sl.Error(err))
-			return fmt.Errorf("%s: failed to delete file from repository: %w", fn, err)
 		}
 
 		return nil

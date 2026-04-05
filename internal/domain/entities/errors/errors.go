@@ -3,11 +3,13 @@ package errors
 import "errors"
 
 var (
-	ErrAliasExists     = errors.New("current alias already exists")
-	ErrAliasNotFound   = errors.New("file with current alias does not exist")
-	ErrNoDownloadsLeft = errors.New("there is no downloads left")
-	ErrFileSizeTooBig  = errors.New("file size too big")
+	ErrAliasTaken          = errors.New("current alias is already taken")
+	ErrFileNotFound        = errors.New("file does not exist")
+	ErrNoDownloadsLeft     = errors.New("there is no downloads left")
+	ErrFileSizeTooBig      = errors.New("file size too big")
+	ErrUploadLimitExceeded = errors.New("upload limit exceeded")
 
+	ErrForbidden           = errors.New("forbidden")
 	ErrUserNotFound        = errors.New("user not found")
 	ErrUserAlreadyExists   = errors.New("user already exists")
 	ErrAccessTokenExpired  = errors.New("access token expired")

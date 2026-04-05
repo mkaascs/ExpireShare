@@ -6,10 +6,11 @@ import (
 	"expire-share/internal/config"
 	"expire-share/internal/lib/log/sl"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type App struct {

@@ -5,9 +5,10 @@ import (
 	"errors"
 	"expire-share/internal/lib/log/sl"
 	"fmt"
-	"github.com/golang-migrate/migrate"
 	"log/slog"
 	"os"
+
+	"github.com/golang-migrate/migrate"
 )
 
 type App struct {

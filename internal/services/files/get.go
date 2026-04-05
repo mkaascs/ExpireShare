@@ -14,29 +14,28 @@ import (
 
 func (fs *Service) GetFileByAlias(ctx context.Context, command commands.GetFile) (*results.GetFile, error) {
 	const fn = "services.file.Service.GetFileByAlias"
-	fs.log = slog.With(slog.String("fn", fn))
+	log := fs.log.With(slog.String("fn", fn))
 
 	fileInfo, err := fs.fileRepo.GetFileByAlias(ctx, command.Alias)
 	if err != nil {
-		if errors.Is(err, domainErrors.ErrAliasNotFound) {
-			fs.log.Info("failed to get file info", sl.Error(err))
-			return nil, domainErrors.ErrAliasNotFound
+		const msg = "failed to get file by alias"
+		if errors.Is(err, domainErrors.ErrFileNotFound) {
+			log.Info(msg, sl.Error(err), slog.String("alias", command.Alias))
+			return nil, domainErrors.ErrFileNotFound
 		}
 
-		fs.log.Error("failed to get file info", sl.Error(err))
-		return nil, fmt.Errorf("%s: failed to get file info: %w", fn, err)
+		log.Error(msg, sl.Error(err), slog.String("alias", command.Alias))
+		return nil, fmt.Errorf("%s: %s: %w", fn, msg, err)
 	}
 
-	err = fs.checkPassword(fileInfo, command.Password)
+	err = fs.checkAccess(fileInfo, command.UserID, command.Roles, command.Password)
 	if err != nil {
-		fs.log.Info("failed to check password", sl.Error(err))
-		return nil, fmt.Errorf("%s: failed to check password: %w", fn, err)
+		log.Info("access denied", sl.Error(err), slog.String("alias", command.Alias))
+		return nil, fmt.Errorf("%s: access denied: %w", fn, err)
 	}
 
-	res := results.GetFile{
+	return &results.GetFile{
 		DownloadsLeft: fileInfo.DownloadsLeft,
 		ExpiresIn:     time.Until(fileInfo.ExpiresAt),
-	}
-
-	return &res, nil
+	}, nil
 }
