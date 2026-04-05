@@ -1,3 +1,5 @@
+SET GLOBAL time_zone = '+00:00';
+
 -- Create table for file
 CREATE TABLE IF NOT EXISTS files (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,

@@ -2,14 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"expire-share/internal/config"
 	"fmt"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/mysql"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"log"
 	"os"
-
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/golang-migrate/migrate"
-	_ "github.com/golang-migrate/migrate/source/file"
 )
 
 func main() {
@@ -51,7 +51,7 @@ func main() {
 		log.Fatalf(fmt.Sprintf("unknown command: %s", cmd))
 	}
 
-	if err := fn(); err != nil {
+	if err := fn(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		log.Fatalf("failed to migrate table: %v", err)
 	}
 

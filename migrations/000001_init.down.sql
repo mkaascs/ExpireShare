@@ -1,2 +1,3 @@
--- Down changes
+SET GLOBAL time_zone = 'SYSTEM';
+
 DROP TABLE IF EXISTS files;

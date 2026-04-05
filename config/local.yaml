@@ -5,7 +5,7 @@ storage:
   path: "./storage/"
   max_file_size: "500mb"
 http_server:
-  address: 6010
+  port: 6010
   timeout: 4s
   idle_timeout: 60s
 service:
