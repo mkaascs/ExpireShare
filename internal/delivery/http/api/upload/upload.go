@@ -2,22 +2,18 @@ package upload
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"expire-share/internal/config"
-	"expire-share/internal/lib/api/response"
+	"expire-share/internal/delivery/middlewares"
+	"expire-share/internal/delivery/response"
+	"expire-share/internal/delivery/util"
+	"expire-share/internal/domain/dto/files/commands"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services/dto/commands"
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/render"
 	"log/slog"
 	"mime/multipart"
 	"net/http"
-	"strconv"
 	"time"
-
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/jwtauth"
-	"github.com/go-chi/render"
-	"github.com/go-playground/validator/v10"
 )
 
 type Request struct {
@@ -26,16 +22,24 @@ type Request struct {
 	Password     string `json:"password,omitempty" example:"1234"`
 }
 
+func (r *Request) SetDefault(cfg config.Service) {
+	if r.MaxDownloads == 0 {
+		r.MaxDownloads = cfg.MaxDownloads
+	}
+
+	if r.TTL == "" {
+		r.TTL = cfg.DefaultTtl.String()
+	}
+}
+
 type Response struct {
 	response.Response
 	Alias string `json:"alias,omitempty"`
 }
 
 type FileUploader interface {
-	UploadFile(ctx context.Context, command commands.UploadFileCommand) (string, error)
+	UploadFile(ctx context.Context, command commands.UploadFile) (string, error)
 }
-
-var validate *validator.Validate
 
 // New @Summary Upload file
 //
@@ -50,75 +54,51 @@ var validate *validator.Validate
 //	@Failure		500		{object}	Response
 //	@Router			/upload [post]
 func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.HandlerFunc {
-	validate = validator.New()
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.upload.api.New"
-		log = slog.With(
+		log := log.With(
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
 
-		_, claims, err := jwtauth.FromContext(r.Context())
-		if err != nil {
-			log.Error("failed to extract claims", sl.Error(err))
-			response.RenderError(w, r,
-				http.StatusInternalServerError,
-				"failed to upload file")
-			return
-		}
-
-		userIdStr, ok := claims["sub"].(string)
+		request, ok := middlewares.GetParsedBodyRequest[Request](r)
 		if !ok {
-			log.Error("failed to extract user id")
+			log.Error("failed to parse request")
 			response.RenderError(w, r,
 				http.StatusInternalServerError,
-				"failed to upload file")
+				"internal server error")
 			return
 		}
 
-		err = r.ParseMultipartForm(cfg.MaxFileSizeInBytes)
+		claims, err := middlewares.GetUserClaims(r)
 		if err != nil {
-			log.Error("failed to parse form", sl.Error(err))
+			log.Error("failed to get user claims", sl.Error(err))
 			response.RenderError(w, r,
-				http.StatusBadRequest,
-				"failed to parse multipart/form")
-			return
-		}
-
-		request := Request{
-			MaxDownloads: cfg.MaxDownloads,
-			TTL:          cfg.DefaultTtl.String(),
-			Password:     "",
-		}
-
-		jsonData := r.FormValue("json")
-		if err := json.Unmarshal([]byte(jsonData), &request); err != nil {
-			log.Error("failed to parse json", sl.Error(err))
-			response.RenderError(w, r,
-				http.StatusBadRequest,
-				"failed to parse json")
+				http.StatusInternalServerError,
+				"internal server error")
 			return
 		}
 
 		parsedTtl, err := time.ParseDuration(request.TTL)
 		if err != nil {
-			log.Error("failed to parse ttl", sl.Error(err))
+			log.Info("failed to parse ttl", sl.Error(err))
 			response.RenderError(w, r,
 				http.StatusBadRequest,
 				"failed to parse ttl. it must be like '1h20m30s'")
 			return
 		}
 
-		if err := validate.Struct(request); err != nil {
-			var validationErrors validator.ValidationErrors
-			errors.As(err, &validationErrors)
-			log.Error("invalid request", sl.Error(err))
-			response.RenderValidationError(w, r, validationErrors)
+		err = r.ParseMultipartForm(cfg.MaxFileSizeInBytes)
+		if err != nil {
+			log.Info("failed to parse form", sl.Error(err))
+			response.RenderError(w, r,
+				http.StatusBadRequest,
+				"failed to parse multipart/form")
 			return
 		}
 
 		file, header, err := r.FormFile("file")
 		if err != nil {
-			log.Error("file is required", sl.Error(err))
+			log.Info("file is required", sl.Error(err))
 			response.RenderError(w, r,
 				http.StatusBadRequest,
 				"file is required")
@@ -126,26 +106,26 @@ func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.Handle
 		}
 
 		defer func(file multipart.File) {
-			err := file.Close()
-			if err != nil {
+			if err := file.Close(); err != nil {
 				log.Error("failed to close file", sl.Error(err))
 			}
 		}(file)
 
-		ctx := r.Context()
-		userId, _ := strconv.ParseInt(userIdStr, 10, 64)
-		alias, err := uploader.UploadFile(ctx, commands.UploadFileCommand{
+		alias, err := uploader.UploadFile(r.Context(), commands.UploadFile{
 			File:         file,
 			FileSize:     header.Size,
 			Filename:     header.Filename,
 			Password:     request.Password,
 			MaxDownloads: request.MaxDownloads,
 			TTL:          parsedTtl,
-			UserId:       userId,
+			RequestingUserInfo: commands.RequestingUserInfo{
+				UserID: claims.UserID,
+				Roles:  claims.Roles,
+			},
 		})
 
 		if err != nil {
-			if response.RenderFileServiceError(w, r, err) {
+			if response.RenderFileServiceError(w, r, err) || util.IsCtxError(err) {
 				log.Error("failed to upload file", sl.Error(err))
 				return
 			}
@@ -153,15 +133,14 @@ func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.Handle
 			log.Error("failed to upload file", sl.Error(err))
 			response.RenderError(w, r,
 				http.StatusInternalServerError,
-				"failed to upload file")
+				"internal server error")
 			return
 		}
 
 		log.Info("file was successfully uploaded", slog.String("alias", alias))
 		render.Status(r, http.StatusCreated)
 		render.JSON(w, r, Response{
-			Response: response.Response{},
-			Alias:    alias,
+			Alias: alias,
 		})
 	}
 }

@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"errors"
-	"expire-share/internal/lib/api/response"
+	"expire-share/internal/delivery/response"
 	"expire-share/internal/lib/log/sl"
 	"log/slog"
 	"net/http"
@@ -13,12 +13,12 @@ import (
 func NewValidator[T any](log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		validate := validator.New()
-		log = log.With(slog.String("component", "middleware/validating"))
+		logger := log.With(slog.String("component", "middleware/validating"))
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			request, ok := GetParsedBodyRequest[T](r)
 			if !ok {
-				log.Error("failed to get parsed body request. try execute NewBodyParser before validating")
+				logger.Error("failed to get parsed body request. try execute NewBodyParser before validating")
 				response.RenderError(w, r,
 					http.StatusInternalServerError,
 					"internal server error")
@@ -28,7 +28,7 @@ func NewValidator[T any](log *slog.Logger) func(http.Handler) http.Handler {
 			if err := validate.Struct(request); err != nil {
 				var validationErrors validator.ValidationErrors
 				errors.As(err, &validationErrors)
-				log.Info("invalid request", sl.Error(err))
+				logger.Info("invalid request", sl.Error(err))
 				response.RenderValidationError(w, r, validationErrors)
 				return
 			}

@@ -3,20 +3,20 @@ package download
 import (
 	"context"
 	"errors"
-	"expire-share/internal/lib/api/response"
+	"expire-share/internal/delivery/response"
+	"expire-share/internal/delivery/util"
+	"expire-share/internal/domain/dto/files/commands"
+	"expire-share/internal/domain/dto/files/results"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services/dto/commands"
-	"expire-share/internal/services/dto/results"
 	"fmt"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"io"
 	"log/slog"
 	"mime"
 	"net/http"
 	"path/filepath"
 	"syscall"
-
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
 )
 
 type Response struct {
@@ -24,7 +24,7 @@ type Response struct {
 }
 
 type FileDownloader interface {
-	DownloadFile(ctx context.Context, command commands.DownloadFileCommand) (*results.DownloadFileResult, error)
+	DownloadFile(ctx context.Context, command commands.DownloadFile) (*results.DownloadFile, error)
 }
 
 // New @Summary Download file
@@ -44,31 +44,29 @@ type FileDownloader interface {
 func New(downloader FileDownloader, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.download.New"
-		log = slog.With(
+		log := log.With(
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
 
 		alias := chi.URLParam(r, "alias")
-
 		password := r.Header.Get("X-Resource-Password")
 
-		command := commands.DownloadFileCommand{
+		file, err := downloader.DownloadFile(r.Context(), commands.DownloadFile{
 			Alias:    alias,
 			Password: password,
-		}
+		})
 
-		ctx := r.Context()
-		file, err := downloader.DownloadFile(ctx, command)
 		if err != nil {
-			if response.RenderFileServiceError(w, r, err) {
-				log.Info("failed to get file info", sl.Error(err), slog.String("alias", alias))
+			const msg = "failed to get file info"
+			if response.RenderFileServiceError(w, r, err) || util.IsCtxError(err) {
+				log.Info(msg, sl.Error(err), slog.String("alias", alias))
 				return
 			}
 
-			log.Error("failed to get file info", sl.Error(err), slog.String("alias", alias))
+			log.Error(msg, sl.Error(err), slog.String("alias", alias))
 			response.RenderError(w, r,
 				http.StatusInternalServerError,
-				"failed to get file")
+				"internal server error")
 			return
 		}
 
@@ -83,28 +81,26 @@ func New(downloader FileDownloader, log *slog.Logger) http.HandlerFunc {
 
 		data, err := io.ReadAll(file.File)
 		_, err = w.Write(data)
-		if err != nil {
-			if err := file.Close(); err != nil {
-				log.Error("failed to close file", sl.Error(err))
-			}
-
-			if errors.Is(err, syscall.EPIPE) || errors.Is(err, io.ErrClosedPipe) {
-				log.Info("client disconnected during download")
-				return
-			}
-
-			log.Error("failed to write response", sl.Error(err))
-			response.RenderError(w, r,
-				http.StatusInternalServerError,
-				"failed to write response")
-			return
-		}
 
 		if err := file.Close(); err != nil {
 			log.Error("failed to close file", sl.Error(err))
 			return
 		}
 
-		log.Info("file was successfully downloaded", slog.String("alias", alias))
+		if err == nil {
+			log.Info("file was successfully downloaded", slog.String("alias", alias))
+			return
+		}
+
+		if errors.Is(err, syscall.EPIPE) || errors.Is(err, io.ErrClosedPipe) {
+			log.Info("client disconnected during download")
+			return
+		}
+
+		log.Error("failed to write response", sl.Error(err))
+		response.RenderError(w, r,
+			http.StatusInternalServerError,
+			"internal server error")
+		return
 	}
 }

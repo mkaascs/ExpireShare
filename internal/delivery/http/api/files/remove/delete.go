@@ -2,15 +2,16 @@ package remove
 
 import (
 	"context"
-	"expire-share/internal/lib/api/response"
+	"expire-share/internal/delivery/middlewares"
+	"expire-share/internal/delivery/response"
+	"expire-share/internal/delivery/util"
+	"expire-share/internal/domain/dto/files/commands"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services/dto/commands"
-	"log/slog"
-	"net/http"
-
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+	"log/slog"
+	"net/http"
 )
 
 type Response struct {
@@ -18,7 +19,7 @@ type Response struct {
 }
 
 type FileDeleter interface {
-	DeleteFile(ctx context.Context, command commands.DeleteFileCommand) error
+	DeleteFile(ctx context.Context, command commands.DeleteFile) error
 }
 
 // New @Summary Delete file
@@ -37,30 +38,41 @@ type FileDeleter interface {
 func New(deleter FileDeleter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.file.api.delete.New"
-		log = slog.With(
+		log := log.With(
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
 
 		alias := chi.URLParam(r, "alias")
-
 		password := r.Header.Get("X-Resource-Password")
 
-		ctx := r.Context()
-		err := deleter.DeleteFile(ctx, commands.DeleteFileCommand{
+		claims, err := middlewares.GetUserClaims(r)
+		if err != nil {
+			log.Error("failed to get user claims", sl.Error(err))
+			response.RenderError(w, r,
+				http.StatusInternalServerError,
+				"internal server error")
+			return
+		}
+
+		err = deleter.DeleteFile(r.Context(), commands.DeleteFile{
 			Alias:    alias,
 			Password: password,
+			RequestingUserInfo: commands.RequestingUserInfo{
+				UserID: claims.UserID,
+				Roles:  claims.Roles,
+			},
 		})
 
 		if err != nil {
-			if response.RenderFileServiceError(w, r, err) {
-				log.Info("failed to delete file info", sl.Error(err), slog.String("alias", alias))
+			if response.RenderFileServiceError(w, r, err) || util.IsCtxError(err) {
+				log.Info("failed to delete file", sl.Error(err), slog.String("alias", alias))
 				return
 			}
 
 			log.Error("failed to delete file", sl.Error(err), slog.String("alias", alias))
 			response.RenderError(w, r,
 				http.StatusInternalServerError,
-				"failed to delete file")
+				"internal server error")
 			return
 		}
 

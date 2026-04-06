@@ -58,14 +58,14 @@ func RenderFileServiceError(w http.ResponseWriter, r *http.Request, err error) b
 	if errors.Is(err, domainErrors.ErrFilePasswordRequired) {
 		RenderError(w, r,
 			http.StatusUnauthorized,
-			"password is required")
+			"password for file is required")
 		return true
 	}
 
 	if errors.Is(err, domainErrors.ErrFilePasswordInvalid) {
 		RenderError(w, r,
 			http.StatusForbidden,
-			"incorrect password")
+			"invalid password")
 		return true
 	}
 
@@ -73,6 +73,31 @@ func RenderFileServiceError(w http.ResponseWriter, r *http.Request, err error) b
 		RenderError(w, r,
 			http.StatusUnprocessableEntity,
 			"file size is very big")
+		return true
+	}
+
+	return false
+}
+
+func RenderAuthServiceError(w http.ResponseWriter, r *http.Request, err error) bool {
+	if errors.Is(err, domainErrors.ErrAccessTokenExpired) {
+		RenderError(w, r,
+			http.StatusUnauthorized,
+			"access token is expired, refresh or login again")
+		return true
+	}
+
+	if errors.Is(err, domainErrors.ErrAccessTokenRevoked) {
+		RenderError(w, r,
+			http.StatusUnauthorized,
+			"access token is revoked, refresh or login again")
+		return true
+	}
+
+	if errors.Is(err, domainErrors.ErrInvalidAccessToken) {
+		RenderError(w, r,
+			http.StatusUnauthorized,
+			"invalid access token")
 		return true
 	}
 
