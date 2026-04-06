@@ -3,7 +3,7 @@ SET GLOBAL time_zone = '+00:00';
 -- Create table for file
 CREATE TABLE IF NOT EXISTS files (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    file_path TEXT NOT NULL,
+    file_name TEXT NOT NULL,
     alias VARCHAR(50) NOT NULL,
     downloads_left SMALLINT,
     loaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

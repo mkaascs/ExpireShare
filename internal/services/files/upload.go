@@ -6,10 +6,8 @@ import (
 	"expire-share/internal/lib/alias"
 	"expire-share/internal/lib/log/sl"
 	"fmt"
-	"log/slog"
-	"path/filepath"
-
 	"golang.org/x/crypto/bcrypt"
+	"log/slog"
 )
 
 func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFile) (string, error) {
@@ -40,9 +38,8 @@ func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFile) 
 		}
 	}
 
-	// TODO: remove filepath
 	_, err = fs.fileRepo.AddFile(ctx, commands.AddFile{
-		FilePath:     filepath.Join(genAlias, command.Filename),
+		Filename:     command.Filename,
 		Alias:        genAlias,
 		MaxDownloads: command.MaxDownloads,
 		TTL:          command.TTL,

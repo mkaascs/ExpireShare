@@ -39,7 +39,7 @@ type DeleteFile struct {
 }
 
 type AddFile struct {
-	FilePath     string
+	Filename     string
 	Alias        string
 	MaxDownloads int16
 	PasswordHash string
