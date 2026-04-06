@@ -8,6 +8,7 @@ tasks:
   mocks:
     desc: "Generating all mocks from domain interfaces"
     cmds:
+      - chmod +x ./scripts/gen_mocks.sh
       - ./scripts/gen_mocks.sh
   test:
     desc: "Run all tests"
