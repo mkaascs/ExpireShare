@@ -1,4 +1,4 @@
-package login
+package logout
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"expire-share/internal/delivery/response"
 	"expire-share/internal/delivery/util"
 	"expire-share/internal/domain/dto/auth/commands"
-	"expire-share/internal/domain/dto/auth/results"
 	"expire-share/internal/lib/log/sl"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
@@ -15,24 +14,21 @@ import (
 )
 
 type Request struct {
-	Login    string `json:"login" validate:"required,min=3" example:"user"`
-	Password string `json:"password" validate:"required,min=5" example:"expire123"`
+	AccessToken  string `json:"access_token" validate:"required"`
+	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
 type Response struct {
 	response.Response
-	AccessToken  string `json:"access_token,omitempty"`
-	RefreshToken string `json:"refresh_token,omitempty"`
-	ExpiresIn    int64  `json:"expires_in,omitempty"`
 }
 
-type UserLogin interface {
-	Login(ctx context.Context, command commands.Login) (*results.Login, error)
+type UserLogout interface {
+	Logout(ctx context.Context, command commands.Logout) error
 }
 
-func New(login UserLogin, log *slog.Logger) http.HandlerFunc {
+func New(logout UserLogout, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const fn = "http.api.auth.login.New"
+		const fn = "http.api.auth.logout.New"
 		log := log.With(
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
@@ -46,30 +42,25 @@ func New(login UserLogin, log *slog.Logger) http.HandlerFunc {
 			return
 		}
 
-		result, err := login.Login(r.Context(), commands.Login{
-			Login:    request.Login,
-			Password: request.Password,
+		err := logout.Logout(r.Context(), commands.Logout{
+			AccessToken:  request.AccessToken,
+			RefreshToken: request.RefreshToken,
 		})
 
 		if err != nil {
 			if response.RenderAuthServiceError(w, r, err) || util.IsCtxError(err) {
-				log.Info("failed to login", sl.Error(err))
+				log.Info("failed to logout", sl.Error(err))
 				return
 			}
 
-			log.Error("failed to login", sl.Error(err))
+			log.Error("failed to logout", sl.Error(err))
 			response.RenderError(w, r,
 				http.StatusInternalServerError,
 				"internal server error")
 			return
 		}
 
-		log.Info("user login successfully", slog.Int64("user_id", result.User.ID))
+		log.Info("user logout successfully")
 		render.Status(r, http.StatusOK)
-		render.JSON(w, r, Response{
-			AccessToken:  result.Tokens.AccessToken,
-			RefreshToken: result.Tokens.RefreshToken,
-			ExpiresIn:    result.ExpiresIn,
-		})
 	}
 }

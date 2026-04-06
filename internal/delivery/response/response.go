@@ -101,10 +101,6 @@ func RenderAuthServiceError(w http.ResponseWriter, r *http.Request, err error) b
 		return true
 	}
 
-	return false
-}
-
-func RenderUserServiceError(w http.ResponseWriter, r *http.Request, err error) bool {
 	if errors.Is(err, domainErrors.ErrUserAlreadyExists) {
 		RenderError(w, r,
 			http.StatusConflict,

@@ -3,14 +3,15 @@ package refresh
 import (
 	"context"
 	"expire-share/internal/delivery/middlewares"
-	"expire-share/internal/domain/entities"
-	"expire-share/internal/lib/api/response"
+	"expire-share/internal/delivery/response"
+	"expire-share/internal/delivery/util"
+	"expire-share/internal/domain/dto/auth/commands"
+	"expire-share/internal/domain/dto/auth/results"
 	"expire-share/internal/lib/log/sl"
-	"log/slog"
-	"net/http"
-
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+	"log/slog"
+	"net/http"
 )
 
 type Request struct {
@@ -21,43 +22,52 @@ type Response struct {
 	response.Response
 	AccessToken  string `json:"access_token,omitempty"`
 	RefreshToken string `json:"refresh_token,omitempty"`
+	ExpiresIn    int64  `json:"expires_in,omitempty"`
 }
 
-type TokenRefresher interface {
-	RefreshToken(ctx context.Context, refreshToken string) (*entities.TokenPair, error)
+type TokenRefresh interface {
+	Refresh(ctx context.Context, command commands.Refresh) (*results.Refresh, error)
 }
 
-func New(refresher TokenRefresher, log *slog.Logger) http.HandlerFunc {
+func New(refresh TokenRefresh, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const fn = "http.auth.token.refresh.New"
-		log = slog.With(
+		const fn = "http.api.auth.refresh.New"
+		log := log.With(
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
 
-		var request Request
-		request, _ = middlewares.GetParsedBodyRequest[Request](r)
+		request, ok := middlewares.GetParsedBodyRequest[Request](r)
+		if !ok {
+			log.Error("failed to parse request")
+			response.RenderError(w, r,
+				http.StatusInternalServerError,
+				"internal server error")
+			return
+		}
 
-		ctx := r.Context()
-		tokens, err := refresher.RefreshToken(ctx, request.RefreshToken)
+		result, err := refresh.Refresh(r.Context(), commands.Refresh{
+			RefreshToken: request.RefreshToken,
+		})
 
 		if err != nil {
-			if response.RenderUserServiceError(w, r, err) {
-				log.Info("failed to refresh token")
+			if response.RenderAuthServiceError(w, r, err) || util.IsCtxError(err) {
+				log.Info("failed to refresh token", sl.Error(err))
 				return
 			}
 
 			log.Error("failed to refresh token", sl.Error(err))
 			response.RenderError(w, r,
 				http.StatusInternalServerError,
-				"failed to refresh token")
+				"internal server error")
 			return
 		}
 
-		log.Info("user login successfully")
+		log.Info("user refresh token successfully")
 		render.Status(r, http.StatusOK)
 		render.JSON(w, r, Response{
-			AccessToken:  tokens.AccessToken,
-			RefreshToken: tokens.RefreshToken,
+			AccessToken:  result.Tokens.AccessToken,
+			RefreshToken: result.Tokens.RefreshToken,
+			ExpiresIn:    result.ExpiresIn,
 		})
 	}
 }
