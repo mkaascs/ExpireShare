@@ -8,8 +8,6 @@ import (
 	"expire-share/internal/lib/log/sl"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 )
 
 func (fs *Service) DeleteFile(ctx context.Context, command commands.DeleteFile) error {
@@ -40,9 +38,8 @@ func (fs *Service) DeleteFile(ctx context.Context, command commands.DeleteFile) 
 		return fmt.Errorf("%s: failed to delete file info: %w", fn, err)
 	}
 
-	folderPath := filepath.Join(fs.cfg.Path, command.Alias)
-	if err := os.RemoveAll(folderPath); err != nil {
-		fs.log.Error("failed to delete file from storage", sl.Error(err))
+	if err := fs.fileStorage.Delete(command.Alias); err != nil {
+		log.Error("failed to delete file from storage", sl.Error(err))
 		return fmt.Errorf("%s: failed to delete file from storage: %w", fn, err)
 	}
 

@@ -9,8 +9,6 @@ import (
 	"expire-share/internal/lib/log/sl"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 )
 
 func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFile) (*results.DownloadFile, error) {
@@ -41,69 +39,33 @@ func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFi
 		return nil, fmt.Errorf("%s: failed to decrement downloads left: %w", fn, err)
 	}
 
-	if downloadsLeft == 0 {
-		defer func() {
-			err = fs.fileRepo.DeleteFile(ctx, command.Alias)
-			if err != nil {
-				log.Error("failed to delete file from repository", sl.Error(err))
-			}
-		}()
-	}
-
-	filePath := filepath.Join(fs.cfg.Path, fileInfo.FilePath)
-
-	file, err := os.Open(filePath)
+	result, err := fs.fileStorage.Download(command.Alias)
 	if err != nil {
-		log.Error("failed to open file", sl.Error(err))
-		return nil, fmt.Errorf("%s: failed to open file: %w", fn, err)
-	}
-
-	stat, err := file.Stat()
-	if err != nil {
-		log.Error("failed to stat file", sl.Error(err))
-		return nil, fmt.Errorf("%s: failed to stat file: %w", fn, err)
-	}
-
-	closeFunc := func() error {
-		err := file.Close()
-		if err != nil {
-			log.Error("failed to close file", sl.Error(err))
-			return fmt.Errorf("%s: failed to close file: %w", fn, err)
-		}
-
-		return nil
+		log.Error("failed to download file from storage", sl.Error(err))
+		return nil, fmt.Errorf("%s: failed to download file from storage: %w", fn, err)
 	}
 
 	if downloadsLeft > 0 {
-		res := results.DownloadFile{
-			File:     file,
-			FileInfo: stat,
-			Close:    closeFunc,
-		}
-
-		return &res, nil
+		return result, nil
 	}
 
-	closeAndDeleteFunc := func() error {
-		err := closeFunc()
-		if err != nil {
-			return err
-		}
+	return &results.DownloadFile{
+		File:     result.File,
+		FileInfo: result.FileInfo,
+		Close: func() error {
+			if err := result.Close(); err != nil {
+				return fmt.Errorf("%s: %w", fn, err)
+			}
 
-		err = os.RemoveAll(filepath.Join(fs.cfg.Path, command.Alias))
-		if err != nil {
-			log.Error("failed to remove file", sl.Error(err))
-			return fmt.Errorf("%s: failed to remove file: %w", fn, err)
-		}
+			if err := fs.fileRepo.DeleteFile(ctx, command.Alias); err != nil {
+				return fmt.Errorf("%s: %w", fn, err)
+			}
 
-		return nil
-	}
+			if err := fs.fileStorage.Delete(command.Alias); err != nil {
+				return fmt.Errorf("%s: %w", fn, err)
+			}
 
-	res := results.DownloadFile{
-		File:     file,
-		FileInfo: stat,
-		Close:    closeAndDeleteFunc,
-	}
-
-	return &res, nil
+			return nil
+		},
+	}, nil
 }
