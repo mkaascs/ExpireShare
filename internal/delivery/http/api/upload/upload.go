@@ -126,7 +126,7 @@ func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.Handle
 
 		if err != nil {
 			if response.RenderFileServiceError(w, r, err) || util.IsCtxError(err) {
-				log.Error("failed to upload file", sl.Error(err))
+				log.Info("failed to upload file", sl.Error(err))
 				return
 			}
 

@@ -3,15 +3,15 @@ package login
 import (
 	"context"
 	"expire-share/internal/delivery/middlewares"
-	"expire-share/internal/domain/entities"
-	"expire-share/internal/lib/api/response"
+	"expire-share/internal/delivery/response"
+	"expire-share/internal/delivery/util"
+	"expire-share/internal/domain/dto/auth/commands"
+	"expire-share/internal/domain/dto/auth/results"
 	"expire-share/internal/lib/log/sl"
-	"expire-share/internal/services/dto/commands"
-	"log/slog"
-	"net/http"
-
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+	"log/slog"
+	"net/http"
 )
 
 type Request struct {
@@ -26,27 +26,32 @@ type Response struct {
 }
 
 type UserLogin interface {
-	Login(ctx context.Context, command commands.LoginCommand) (*entities.TokenPair, error)
+	Login(ctx context.Context, command commands.Login) (*results.Login, error)
 }
 
 func New(login UserLogin, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.auth.login.New"
-		log = slog.With(
+		log := log.With(
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
 
-		var request Request
-		request, _ = middlewares.GetParsedBodyRequest[Request](r)
+		request, ok := middlewares.GetParsedBodyRequest[Request](r)
+		if !ok {
+			log.Error("failed to parse request")
+			response.RenderError(w, r,
+				http.StatusInternalServerError,
+				"internal server error")
+			return
+		}
 
-		ctx := r.Context()
-		tokens, err := login.Login(ctx, commands.LoginCommand{
+		result, err := login.Login(r.Context(), commands.Login{
 			Login:    request.Login,
 			Password: request.Password,
 		})
 
 		if err != nil {
-			if response.RenderUserServiceError(w, r, err) {
+			if response.RenderUserServiceError(w, r, err) || util.IsCtxError(err) {
 				log.Info("failed to login", sl.Error(err))
 				return
 			}
