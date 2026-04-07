@@ -19,9 +19,9 @@ func (fs *Service) GetFileByAlias(ctx context.Context, command commands.GetFile)
 	fileInfo, err := fs.fileRepo.GetFileByAlias(ctx, command.Alias)
 	if err != nil {
 		const msg = "failed to get file by alias"
-		if errors.Is(err, domainErrors.ErrFileNotFound) {
+		if errors.Is(err, domainErrors.ErrFileNotFound) || isCtxError(err) {
 			log.Info(msg, sl.Error(err), slog.String("alias", command.Alias))
-			return nil, domainErrors.ErrFileNotFound
+			return nil, err
 		}
 
 		log.Error(msg, sl.Error(err), slog.String("alias", command.Alias))

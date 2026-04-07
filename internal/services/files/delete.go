@@ -17,9 +17,9 @@ func (fs *Service) DeleteFile(ctx context.Context, command commands.DeleteFile) 
 	fileInfo, err := fs.fileRepo.GetFileByAlias(ctx, command.Alias)
 	if err != nil {
 		const msg = "failed to get file by alias"
-		if errors.Is(err, domainErrors.ErrFileNotFound) {
+		if errors.Is(err, domainErrors.ErrFileNotFound) || isCtxError(err) {
 			log.Info(msg, sl.Error(err), slog.String("alias", command.Alias))
-			return domainErrors.ErrFileNotFound
+			return err
 		}
 
 		log.Error(msg, sl.Error(err), slog.String("alias", command.Alias))
@@ -49,13 +49,25 @@ func (fs *Service) DeleteFile(ctx context.Context, command commands.DeleteFile) 
 
 	err = fs.fileRepo.DeleteFileTx(ctx, tx, command.Alias)
 	if err != nil {
-		log.Error("failed to delete file info", sl.Error(err))
-		return fmt.Errorf("%s: failed to delete file info: %w", fn, err)
+		const msg = "failed to delete file info"
+		if isCtxError(err) {
+			log.Info(msg, sl.Error(err), slog.String("alias", command.Alias))
+			return err
+		}
+
+		log.Error(msg, sl.Error(err), slog.String("alias", command.Alias))
+		return fmt.Errorf("%s: %s: %w", fn, msg, err)
 	}
 
-	if err := fs.fileStorage.Delete(command.Alias); err != nil {
-		log.Error("failed to delete file from storage", sl.Error(err))
-		return fmt.Errorf("%s: failed to delete file from storage: %w", fn, err)
+	if err := fs.fileStorage.Delete(ctx, command.Alias); err != nil {
+		const msg = "failed to delete file from storage"
+		if isCtxError(err) {
+			log.Info(msg, sl.Error(err), slog.String("alias", command.Alias))
+			return err
+		}
+
+		log.Error(msg, sl.Error(err), slog.String("alias", command.Alias))
+		return fmt.Errorf("%s: %s: %w", fn, msg, err)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -65,4 +77,8 @@ func (fs *Service) DeleteFile(ctx context.Context, command commands.DeleteFile) 
 
 	success = true
 	return nil
+}
+
+func isCtxError(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }

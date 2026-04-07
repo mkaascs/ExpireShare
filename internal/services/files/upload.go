@@ -16,8 +16,14 @@ func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFile) 
 
 	filesCount, err := fs.fileRepo.CountByUserID(ctx, command.UserID)
 	if err != nil {
-		log.Info("failed to count files by user id", sl.Error(err), slog.Int64("user_id", command.UserID))
-		return "", fmt.Errorf("%s: failed to count files by user id: %w", fn, err)
+		const msg = "failed to count files by user id"
+		if isCtxError(err) {
+			log.Info(msg, sl.Error(err), slog.Int64("user_id", command.UserID))
+			return "", err
+		}
+
+		log.Info(msg, sl.Error(err), slog.Int64("user_id", command.UserID))
+		return "", fmt.Errorf("%s: %s: %w", fn, msg, err)
 	}
 
 	err = fs.checkUploadQuote(filesCount, command.FileSize, command.Roles)
@@ -62,13 +68,25 @@ func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFile) 
 	})
 
 	if err != nil {
-		log.Error("failed to add file", sl.Error(err))
-		return "", fmt.Errorf("%s: failed to add file: %w", fn, err)
+		const msg = "failed to add file info"
+		if isCtxError(err) {
+			log.Info(msg, sl.Error(err), slog.Int64("user_id", command.UserID))
+			return "", err
+		}
+
+		log.Error(msg, sl.Error(err), slog.Int64("user_id", command.UserID))
+		return "", fmt.Errorf("%s: %s: %w", fn, msg, err)
 	}
 
-	if err := fs.fileStorage.Upload(command.File, genAlias, command.Filename); err != nil {
-		log.Error("failed to upload file to storage", sl.Error(err))
-		return "", fmt.Errorf("%s: failed to upload file to storage: %w", fn, err)
+	if err := fs.fileStorage.Upload(ctx, command.File, genAlias, command.Filename); err != nil {
+		const msg = "failed to upload file"
+		if isCtxError(err) {
+			log.Info(msg, sl.Error(err))
+			return "", err
+		}
+
+		log.Error(msg, sl.Error(err))
+		return "", fmt.Errorf("%s: %s: %w", fn, msg, err)
 	}
 
 	if err := tx.Commit(); err != nil {
