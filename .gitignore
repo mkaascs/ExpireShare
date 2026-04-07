@@ -1,3 +1,4 @@
 .env
 .idea
 /storage
+coverage.out
