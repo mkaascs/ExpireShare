@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"errors"
-	"expire-share/internal/delivery/response"
+	"expire-share/internal/delivery/util/response"
 	"expire-share/internal/lib/log/sl"
 	"log/slog"
 	"net/http"

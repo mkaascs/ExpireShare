@@ -3,8 +3,8 @@ package download
 import (
 	"context"
 	"errors"
-	"expire-share/internal/delivery/response"
 	"expire-share/internal/delivery/util"
+	"expire-share/internal/delivery/util/response"
 	"expire-share/internal/domain/dto/files/commands"
 	"expire-share/internal/domain/dto/files/results"
 	"expire-share/internal/lib/log/sl"
@@ -70,6 +70,12 @@ func New(downloader FileDownloader, log *slog.Logger) http.HandlerFunc {
 			return
 		}
 
+		defer func() {
+			if err := file.Close(); err != nil {
+				log.Error("failed to close file", sl.Error(err))
+			}
+		}()
+
 		contentType := mime.TypeByExtension(filepath.Ext(file.FileInfo.Name()))
 		if contentType == "" {
 			contentType = "application/octet-stream"
@@ -79,28 +85,19 @@ func New(downloader FileDownloader, log *slog.Logger) http.HandlerFunc {
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", file.FileInfo.Name()))
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", file.FileInfo.Size()))
 
-		data, err := io.ReadAll(file.File)
-		_, err = w.Write(data)
+		if _, err := io.Copy(w, file.File); err != nil {
+			if errors.Is(err, syscall.EPIPE) || errors.Is(err, io.ErrClosedPipe) {
+				log.Info("client disconnected during download")
+				return
+			}
 
-		if err := file.Close(); err != nil {
-			log.Error("failed to close file", sl.Error(err))
+			log.Error("failed to write response", sl.Error(err))
+			response.RenderError(w, r,
+				http.StatusInternalServerError,
+				"internal server error")
 			return
 		}
 
-		if err == nil {
-			log.Info("file was successfully downloaded", slog.String("alias", alias))
-			return
-		}
-
-		if errors.Is(err, syscall.EPIPE) || errors.Is(err, io.ErrClosedPipe) {
-			log.Info("client disconnected during download")
-			return
-		}
-
-		log.Error("failed to write response", sl.Error(err))
-		response.RenderError(w, r,
-			http.StatusInternalServerError,
-			"internal server error")
-		return
+		log.Info("file was successfully downloaded", slog.String("alias", alias))
 	}
 }

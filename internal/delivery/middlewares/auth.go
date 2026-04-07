@@ -3,8 +3,8 @@ package middlewares
 import (
 	"context"
 	"errors"
-	"expire-share/internal/delivery/response"
 	"expire-share/internal/delivery/util"
+	"expire-share/internal/delivery/util/response"
 	"expire-share/internal/domain/dto/auth/commands"
 	"expire-share/internal/domain/dto/auth/results"
 	"expire-share/internal/domain/entities"

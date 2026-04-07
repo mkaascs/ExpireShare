@@ -1,10 +1,10 @@
-package remove
+package delete
 
 import (
 	"context"
 	"expire-share/internal/delivery/middlewares"
-	"expire-share/internal/delivery/response"
 	"expire-share/internal/delivery/util"
+	"expire-share/internal/delivery/util/response"
 	"expire-share/internal/domain/dto/files/commands"
 	"expire-share/internal/lib/log/sl"
 	"github.com/go-chi/chi"

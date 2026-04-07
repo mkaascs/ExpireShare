@@ -3,7 +3,7 @@ package middlewares
 import (
 	"context"
 	"expire-share/internal/config"
-	"expire-share/internal/delivery/response"
+	"expire-share/internal/delivery/util/response"
 	"expire-share/internal/lib/log/sl"
 	"log/slog"
 	"net/http"
