@@ -33,39 +33,66 @@ func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFi
 		return nil, fmt.Errorf("%s: access denied: %w", fn, err)
 	}
 
-	downloadsLeft, err := fs.fileRepo.DecrementDownloadsByAlias(ctx, command.Alias)
-	if err != nil {
-		log.Error("failed to decrement downloads left", sl.Error(err))
-		return nil, fmt.Errorf("%s: failed to decrement downloads left: %w", fn, err)
-	}
-
 	result, err := fs.fileStorage.Download(command.Alias)
 	if err != nil {
 		log.Error("failed to download file from storage", sl.Error(err))
 		return nil, fmt.Errorf("%s: failed to download file from storage: %w", fn, err)
 	}
 
+	tx, err := fs.fileRepo.BeginTx(ctx)
+	if err != nil {
+		if err := result.Close(); err != nil {
+			log.Error("failed to close file", sl.Error(err))
+		}
+
+		log.Error("failed to begin tx", sl.Error(err))
+		return nil, fmt.Errorf("%s: failed to begin tx: %w", fn, err)
+	}
+
+	success := false
+	defer func() {
+		if !success {
+			if err := tx.Rollback(); err != nil {
+				log.Error("failed to rollback tx", sl.Error(err))
+			}
+
+			if err := result.Close(); err != nil {
+				log.Error("failed to close file", sl.Error(err))
+			}
+		}
+	}()
+
+	downloadsLeft, err := fs.fileRepo.DecrementDownloadsByAliasTx(ctx, tx, command.Alias)
+	if err != nil {
+		log.Error("failed to decrement downloads left", sl.Error(err), slog.String("alias", command.Alias))
+		return nil, fmt.Errorf("%s: failed to decrement downloads left: %w", fn, err)
+	}
+
 	if downloadsLeft > 0 {
+		if err := tx.Commit(); err != nil {
+			log.Error("failed to commit tx", sl.Error(err))
+			return nil, fmt.Errorf("%s: failed to commit tx: %w", fn, err)
+		}
+
+		success = true
 		return result, nil
 	}
 
-	return &results.DownloadFile{
-		File:     result.File,
-		FileInfo: result.FileInfo,
-		Close: func() error {
-			if err := result.Close(); err != nil {
-				return fmt.Errorf("%s: %w", fn, err)
-			}
+	if err := fs.fileRepo.DeleteFileTx(ctx, tx, command.Alias); err != nil {
+		log.Error("failed to delete file from repo", sl.Error(err), slog.String("alias", command.Alias))
+		return nil, fmt.Errorf("%s: failed to delete from DB: %w", fn, err)
+	}
 
-			if err := fs.fileRepo.DeleteFile(ctx, command.Alias); err != nil {
-				return fmt.Errorf("%s: %w", fn, err)
-			}
+	if err := fs.fileStorage.Delete(command.Alias); err != nil {
+		log.Error("failed to delete file from storage", sl.Error(err), slog.String("alias", command.Alias))
+		return nil, fmt.Errorf("%s: failed to delete from storage: %w", fn, err)
+	}
 
-			if err := fs.fileStorage.Delete(command.Alias); err != nil {
-				return fmt.Errorf("%s: %w", fn, err)
-			}
+	if err := tx.Commit(); err != nil {
+		log.Error("failed to commit tx", sl.Error(err))
+		return nil, fmt.Errorf("%s: failed to commit delete: %w", fn, err)
+	}
 
-			return nil
-		},
-	}, nil
+	success = true
+	return result, nil
 }

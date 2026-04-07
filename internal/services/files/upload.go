@@ -28,7 +28,6 @@ func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFile) 
 
 	genAlias := alias.Gen(fs.cfg.AliasLength)
 
-	// TODO: make nil if empty
 	var hashedBytes []byte
 	if len(command.Password) > 0 {
 		hashedBytes, err = bcrypt.GenerateFromPassword([]byte(command.Password), bcrypt.DefaultCost)
@@ -38,7 +37,22 @@ func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFile) 
 		}
 	}
 
-	_, err = fs.fileRepo.AddFile(ctx, commands.AddFile{
+	tx, err := fs.fileRepo.BeginTx(ctx)
+	if err != nil {
+		log.Error("failed to begin tx", sl.Error(err))
+		return "", fmt.Errorf("%s: failed to upload file: %w", fn, err)
+	}
+
+	success := false
+	defer func() {
+		if !success {
+			if err := tx.Rollback(); err != nil {
+				log.Error("failed to rollback tx", sl.Error(err))
+			}
+		}
+	}()
+
+	_, err = fs.fileRepo.AddFileTx(ctx, tx, commands.AddFile{
 		Filename:     command.Filename,
 		Alias:        genAlias,
 		MaxDownloads: command.MaxDownloads,
@@ -57,5 +71,11 @@ func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFile) 
 		return "", fmt.Errorf("%s: failed to upload file to storage: %w", fn, err)
 	}
 
+	if err := tx.Commit(); err != nil {
+		log.Error("failed to commit tx", sl.Error(err))
+		return "", fmt.Errorf("%s: failed to upload file to storage: %w", fn, err)
+	}
+
+	success = true
 	return genAlias, nil
 }

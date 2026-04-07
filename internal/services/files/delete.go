@@ -32,7 +32,22 @@ func (fs *Service) DeleteFile(ctx context.Context, command commands.DeleteFile) 
 		return fmt.Errorf("%s: access denied: %w", fn, err)
 	}
 
-	err = fs.fileRepo.DeleteFile(ctx, command.Alias)
+	tx, err := fs.fileRepo.BeginTx(ctx)
+	if err != nil {
+		log.Error("failed to begin tx", sl.Error(err))
+		return fmt.Errorf("%s: failed to begin tx: %w", fn, err)
+	}
+
+	success := false
+	defer func() {
+		if !success {
+			if err := tx.Rollback(); err != nil {
+				log.Error("failed to rollback tx", sl.Error(err))
+			}
+		}
+	}()
+
+	err = fs.fileRepo.DeleteFileTx(ctx, tx, command.Alias)
 	if err != nil {
 		log.Error("failed to delete file info", sl.Error(err))
 		return fmt.Errorf("%s: failed to delete file info: %w", fn, err)
@@ -43,5 +58,11 @@ func (fs *Service) DeleteFile(ctx context.Context, command commands.DeleteFile) 
 		return fmt.Errorf("%s: failed to delete file from storage: %w", fn, err)
 	}
 
+	if err := tx.Commit(); err != nil {
+		log.Error("failed to commit tx", sl.Error(err))
+		return fmt.Errorf("%s: failed to commit tx: %w", fn, err)
+	}
+
+	success = true
 	return nil
 }

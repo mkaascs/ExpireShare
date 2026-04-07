@@ -7,11 +7,14 @@ import (
 )
 
 type FileRepo interface {
-	AddFile(ctx context.Context, command commands.AddFile) (int64, error)
+	TxBeginner
+
 	GetFileByAlias(ctx context.Context, alias string) (entities.File, error)
 	GetFilesByUserID(ctx context.Context, userID int64) ([]*entities.File, error)
 	CountByUserID(ctx context.Context, userID int64) (int, error)
-	DecrementDownloadsByAlias(ctx context.Context, alias string) (int16, error)
-	DeleteFile(ctx context.Context, alias string) error
-	DeleteExpiredFiles(ctx context.Context) ([]string, error)
+
+	AddFileTx(ctx context.Context, tx Tx, command commands.AddFile) (int64, error)
+	DecrementDownloadsByAliasTx(ctx context.Context, tx Tx, alias string) (int16, error)
+	DeleteFileTx(ctx context.Context, tx Tx, alias string) error
+	DeleteExpiredFilesTx(ctx context.Context, tx Tx) ([]string, error)
 }
