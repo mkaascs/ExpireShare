@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-type TxBeginner interface {
+type Beginner interface {
 	BeginTx(ctx context.Context) (Tx, error)
 }
 

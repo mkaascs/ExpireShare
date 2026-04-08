@@ -3,7 +3,7 @@ package entities
 import "time"
 
 type File struct {
-	FilePath      string
+	Filename      string
 	Alias         string
 	DownloadsLeft int16
 	PasswordHash  string

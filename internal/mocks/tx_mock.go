@@ -12,7 +12,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockTxBeginner is a mock of TxBeginner interface.
+// MockTxBeginner is a mock of Beginner interface.
 type MockTxBeginner struct {
 	ctrl     *gomock.Controller
 	recorder *MockTxBeginnerMockRecorder

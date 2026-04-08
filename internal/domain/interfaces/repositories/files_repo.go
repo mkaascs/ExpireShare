@@ -8,7 +8,7 @@ import (
 )
 
 type FileRepo interface {
-	tx.TxBeginner
+	tx.Beginner
 
 	GetFileByAlias(ctx context.Context, alias string) (*entities.File, error)
 	CountByUserID(ctx context.Context, userID int64) (int, error)
