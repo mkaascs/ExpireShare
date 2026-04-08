@@ -8,6 +8,7 @@ import (
 	context "context"
 	commands "expire-share/internal/domain/dto/files/commands"
 	entities "expire-share/internal/domain/entities"
+	tx "expire-share/internal/domain/interfaces/tx"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -36,19 +37,34 @@ func (m *MockFileRepo) EXPECT() *MockFileRepoMockRecorder {
 	return m.recorder
 }
 
-// AddFile mocks base method.
-func (m *MockFileRepo) AddFile(ctx context.Context, command commands.AddFile) (int64, error) {
+// AddFileTx mocks base method.
+func (m *MockFileRepo) AddFileTx(ctx context.Context, tx tx.Tx, command commands.AddFile) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddFile", ctx, command)
+	ret := m.ctrl.Call(m, "AddFileTx", ctx, tx, command)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// AddFile indicates an expected call of AddFile.
-func (mr *MockFileRepoMockRecorder) AddFile(ctx, command interface{}) *gomock.Call {
+// AddFileTx indicates an expected call of AddFileTx.
+func (mr *MockFileRepoMockRecorder) AddFileTx(ctx, tx, command interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFile", reflect.TypeOf((*MockFileRepo)(nil).AddFile), ctx, command)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFileTx", reflect.TypeOf((*MockFileRepo)(nil).AddFileTx), ctx, tx, command)
+}
+
+// BeginTx mocks base method.
+func (m *MockFileRepo) BeginTx(ctx context.Context) (tx.Tx, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BeginTx", ctx)
+	ret0, _ := ret[0].(tx.Tx)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BeginTx indicates an expected call of BeginTx.
+func (mr *MockFileRepoMockRecorder) BeginTx(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTx", reflect.TypeOf((*MockFileRepo)(nil).BeginTx), ctx)
 }
 
 // CountByUserID mocks base method.
@@ -66,55 +82,55 @@ func (mr *MockFileRepoMockRecorder) CountByUserID(ctx, userID interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountByUserID", reflect.TypeOf((*MockFileRepo)(nil).CountByUserID), ctx, userID)
 }
 
-// DecrementDownloadsByAlias mocks base method.
-func (m *MockFileRepo) DecrementDownloadsByAlias(ctx context.Context, alias string) (int16, error) {
+// DecrementDownloadsByAliasTx mocks base method.
+func (m *MockFileRepo) DecrementDownloadsByAliasTx(ctx context.Context, tx tx.Tx, alias string) (int16, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DecrementDownloadsByAlias", ctx, alias)
+	ret := m.ctrl.Call(m, "DecrementDownloadsByAliasTx", ctx, tx, alias)
 	ret0, _ := ret[0].(int16)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DecrementDownloadsByAlias indicates an expected call of DecrementDownloadsByAlias.
-func (mr *MockFileRepoMockRecorder) DecrementDownloadsByAlias(ctx, alias interface{}) *gomock.Call {
+// DecrementDownloadsByAliasTx indicates an expected call of DecrementDownloadsByAliasTx.
+func (mr *MockFileRepoMockRecorder) DecrementDownloadsByAliasTx(ctx, tx, alias interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DecrementDownloadsByAlias", reflect.TypeOf((*MockFileRepo)(nil).DecrementDownloadsByAlias), ctx, alias)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DecrementDownloadsByAliasTx", reflect.TypeOf((*MockFileRepo)(nil).DecrementDownloadsByAliasTx), ctx, tx, alias)
 }
 
-// DeleteExpiredFiles mocks base method.
-func (m *MockFileRepo) DeleteExpiredFiles(ctx context.Context) ([]string, error) {
+// DeleteExpiredFilesTx mocks base method.
+func (m *MockFileRepo) DeleteExpiredFilesTx(ctx context.Context, tx tx.Tx, limit int) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteExpiredFiles", ctx)
+	ret := m.ctrl.Call(m, "DeleteExpiredFilesTx", ctx, tx, limit)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DeleteExpiredFiles indicates an expected call of DeleteExpiredFiles.
-func (mr *MockFileRepoMockRecorder) DeleteExpiredFiles(ctx interface{}) *gomock.Call {
+// DeleteExpiredFilesTx indicates an expected call of DeleteExpiredFilesTx.
+func (mr *MockFileRepoMockRecorder) DeleteExpiredFilesTx(ctx, tx, limit interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteExpiredFiles", reflect.TypeOf((*MockFileRepo)(nil).DeleteExpiredFiles), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteExpiredFilesTx", reflect.TypeOf((*MockFileRepo)(nil).DeleteExpiredFilesTx), ctx, tx, limit)
 }
 
-// DeleteFile mocks base method.
-func (m *MockFileRepo) DeleteFile(ctx context.Context, alias string) error {
+// DeleteFileTx mocks base method.
+func (m *MockFileRepo) DeleteFileTx(ctx context.Context, tx tx.Tx, alias string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteFile", ctx, alias)
+	ret := m.ctrl.Call(m, "DeleteFileTx", ctx, tx, alias)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteFile indicates an expected call of DeleteFile.
-func (mr *MockFileRepoMockRecorder) DeleteFile(ctx, alias interface{}) *gomock.Call {
+// DeleteFileTx indicates an expected call of DeleteFileTx.
+func (mr *MockFileRepoMockRecorder) DeleteFileTx(ctx, tx, alias interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFile", reflect.TypeOf((*MockFileRepo)(nil).DeleteFile), ctx, alias)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFileTx", reflect.TypeOf((*MockFileRepo)(nil).DeleteFileTx), ctx, tx, alias)
 }
 
 // GetFileByAlias mocks base method.
-func (m *MockFileRepo) GetFileByAlias(ctx context.Context, alias string) (entities.File, error) {
+func (m *MockFileRepo) GetFileByAlias(ctx context.Context, alias string) (*entities.File, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFileByAlias", ctx, alias)
-	ret0, _ := ret[0].(entities.File)
+	ret0, _ := ret[0].(*entities.File)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -123,19 +139,4 @@ func (m *MockFileRepo) GetFileByAlias(ctx context.Context, alias string) (entiti
 func (mr *MockFileRepoMockRecorder) GetFileByAlias(ctx, alias interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFileByAlias", reflect.TypeOf((*MockFileRepo)(nil).GetFileByAlias), ctx, alias)
-}
-
-// GetFilesByUserID mocks base method.
-func (m *MockFileRepo) GetFilesByUserID(ctx context.Context, userID int64) ([]*entities.File, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetFilesByUserID", ctx, userID)
-	ret0, _ := ret[0].([]*entities.File)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetFilesByUserID indicates an expected call of GetFilesByUserID.
-func (mr *MockFileRepoMockRecorder) GetFilesByUserID(ctx, userID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFilesByUserID", reflect.TypeOf((*MockFileRepo)(nil).GetFilesByUserID), ctx, userID)
 }

@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	context "context"
 	results "expire-share/internal/domain/dto/files/results"
 	io "io"
 	reflect "reflect"
@@ -36,44 +37,44 @@ func (m *MockFile) EXPECT() *MockFileMockRecorder {
 }
 
 // Delete mocks base method.
-func (m *MockFile) Delete(alias string) error {
+func (m *MockFile) Delete(ctx context.Context, alias string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", alias)
+	ret := m.ctrl.Call(m, "Delete", ctx, alias)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockFileMockRecorder) Delete(alias interface{}) *gomock.Call {
+func (mr *MockFileMockRecorder) Delete(ctx, alias interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockFile)(nil).Delete), alias)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockFile)(nil).Delete), ctx, alias)
 }
 
 // Download mocks base method.
-func (m *MockFile) Download(alias string) (*results.DownloadFile, error) {
+func (m *MockFile) Download(ctx context.Context, alias string) (*results.DownloadFile, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Download", alias)
+	ret := m.ctrl.Call(m, "Download", ctx, alias)
 	ret0, _ := ret[0].(*results.DownloadFile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Download indicates an expected call of Download.
-func (mr *MockFileMockRecorder) Download(alias interface{}) *gomock.Call {
+func (mr *MockFileMockRecorder) Download(ctx, alias interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Download", reflect.TypeOf((*MockFile)(nil).Download), alias)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Download", reflect.TypeOf((*MockFile)(nil).Download), ctx, alias)
 }
 
 // Upload mocks base method.
-func (m *MockFile) Upload(file io.Reader, alias, filename string) error {
+func (m *MockFile) Upload(ctx context.Context, file io.Reader, alias, filename string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Upload", file, alias, filename)
+	ret := m.ctrl.Call(m, "Upload", ctx, file, alias, filename)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Upload indicates an expected call of Upload.
-func (mr *MockFileMockRecorder) Upload(file, alias, filename interface{}) *gomock.Call {
+func (mr *MockFileMockRecorder) Upload(ctx, file, alias, filename interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*MockFile)(nil).Upload), file, alias, filename)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*MockFile)(nil).Upload), ctx, file, alias, filename)
 }

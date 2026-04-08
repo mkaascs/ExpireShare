@@ -27,15 +27,15 @@ func (fs *Service) checkUploadQuote(uploadedFilesCount int, filesize int64, role
 		return domainErrors.ErrFileSizeTooBig
 	}
 
-	if hasRole(roles, entities.RoleVip) && uploadedFilesCount >= fs.cfg.Permissions.MaxUploadedFileForVip {
-		return domainErrors.ErrUploadLimitExceeded
+	if hasRole(roles, entities.RoleVip) && uploadedFilesCount < fs.cfg.Permissions.MaxUploadedFileForVip {
+		return nil
 	}
 
-	if uploadedFilesCount >= fs.cfg.Permissions.MaxUploadedFileForUser {
-		return domainErrors.ErrUploadLimitExceeded
+	if uploadedFilesCount < fs.cfg.Permissions.MaxUploadedFileForUser {
+		return nil
 	}
 
-	return nil
+	return domainErrors.ErrUploadLimitExceeded
 }
 
 func (fs *Service) checkOwner(fileInfo entities.File, userID int64) error {

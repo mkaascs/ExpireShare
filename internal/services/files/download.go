@@ -27,7 +27,7 @@ func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFi
 		return nil, fmt.Errorf("%s: %s: %w", fn, msg, err)
 	}
 
-	err = fs.checkPassword(fileInfo, command.Password)
+	err = fs.checkPassword(*fileInfo, command.Password)
 	if err != nil {
 		log.Info("access denied", sl.Error(err), slog.String("alias", command.Alias))
 		return nil, fmt.Errorf("%s: access denied: %w", fn, err)
@@ -36,7 +36,7 @@ func (fs *Service) DownloadFile(ctx context.Context, command commands.DownloadFi
 	result, err := fs.fileStorage.Download(ctx, command.Alias)
 	if err != nil {
 		const msg = "failed to download file from storage"
-		if isCtxError(err) {
+		if errors.Is(err, domainErrors.ErrFileNotFound) || isCtxError(err) {
 			log.Info(msg, sl.Error(err), slog.String("alias", command.Alias))
 			return nil, err
 		}
