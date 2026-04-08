@@ -5,10 +5,11 @@ import (
 	"errors"
 	"expire-share/internal/lib/log/sl"
 	"fmt"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/mysql"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"log/slog"
 	"os"
-
-	"github.com/golang-migrate/migrate"
 )
 
 type App struct {
@@ -60,7 +61,7 @@ func (a *App) Close() error {
 		return fmt.Errorf("%s: failed to close db: %w", fn, err)
 	}
 
-	log.Info("closed database successfully", slog.String("driver", "mysql"))
+	log.Info("database closed successfully", slog.String("driver", "mysql"))
 	return nil
 }
 
