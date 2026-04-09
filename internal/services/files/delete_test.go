@@ -9,7 +9,6 @@ import (
 	domainErrors "expire-share/internal/domain/entities/errors"
 	"expire-share/internal/domain/interfaces/tx"
 	"expire-share/internal/mocks"
-	"expire-share/internal/testutil"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -78,74 +77,6 @@ func TestService_DeleteFile(t *testing.T) {
 		fileService := New(mockFileRepo, mockFileStorage, log, cfg)
 		err := fileService.DeleteFile(context.Background(), command)
 		require.NoError(t, err)
-	})
-
-	t.Run("success with password", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		mockTx := mocks.NewMockTx(ctrl)
-		mockFileRepo := mocks.NewMockFileRepo(ctrl)
-		mockFileStorage := mocks.NewMockFile(ctrl)
-
-		mockFileRepo.EXPECT().GetFileByAlias(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ context.Context, alias string) (*entities.File, error) {
-				require.Equal(t, command.Alias, alias)
-				return &entities.File{
-					Alias:        command.Alias,
-					PasswordHash: testutil.HashPassword(t, "correct-password"),
-					UserID:       command.UserID,
-				}, nil
-			})
-
-		mockFileRepo.EXPECT().BeginTx(gomock.Any()).Return(mockTx, nil)
-
-		mockFileRepo.EXPECT().DeleteFileTx(gomock.Any(), mockTx, gomock.Any()).
-			DoAndReturn(func(_ context.Context, tx tx.Tx, alias string) error {
-				require.Equal(t, command.Alias, alias)
-				return nil
-			})
-
-		mockFileStorage.EXPECT().Delete(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(_ context.Context, alias string) error {
-				require.Equal(t, command.Alias, alias)
-				return nil
-			})
-
-		mockTx.EXPECT().Commit().Return(nil)
-
-		fileService := New(mockFileRepo, mockFileStorage, log, cfg)
-		err := fileService.DeleteFile(context.Background(), commands.DeleteFile{
-			Alias:              command.Alias,
-			Password:           "correct-password",
-			RequestingUserInfo: command.RequestingUserInfo,
-		})
-
-		require.NoError(t, err)
-	})
-
-	t.Run("invalid file password", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		mockFileRepo := mocks.NewMockFileRepo(ctrl)
-		mockFileStorage := mocks.NewMockFile(ctrl)
-
-		mockFileRepo.EXPECT().GetFileByAlias(gomock.Any(), gomock.Any()).
-			Return(&entities.File{
-				Alias:        command.Alias,
-				PasswordHash: testutil.HashPassword(t, "correct-password"),
-				UserID:       command.UserID,
-			}, nil)
-
-		fileService := New(mockFileRepo, mockFileStorage, log, cfg)
-		err := fileService.DeleteFile(context.Background(), commands.DeleteFile{
-			Alias:              command.Alias,
-			Password:           "invalid-password",
-			RequestingUserInfo: command.RequestingUserInfo,
-		})
-
-		require.ErrorIs(t, err, domainErrors.ErrFilePasswordInvalid)
 	})
 
 	t.Run("delete another user file", func(t *testing.T) {

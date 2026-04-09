@@ -47,7 +47,6 @@ func New(getter FileGetter, log *slog.Logger) http.HandlerFunc {
 			slog.String("request_id", middleware.GetReqID(r.Context())))
 
 		alias := chi.URLParam(r, "alias")
-		password := r.Header.Get("X-Resource-Password")
 
 		claims, err := middlewares.GetUserClaims(r)
 		if err != nil {
@@ -59,8 +58,7 @@ func New(getter FileGetter, log *slog.Logger) http.HandlerFunc {
 		}
 
 		file, err := getter.GetFileByAlias(r.Context(), commands.GetFile{
-			Alias:    alias,
-			Password: password,
+			Alias: alias,
 			RequestingUserInfo: commands.RequestingUserInfo{
 				UserID: claims.UserID,
 				Roles:  claims.Roles,
@@ -85,7 +83,7 @@ func New(getter FileGetter, log *slog.Logger) http.HandlerFunc {
 		render.Status(r, http.StatusOK)
 		render.JSON(w, r, Response{
 			DownloadsLeft: file.DownloadsLeft,
-			ExpiresIn: fmt.Sprintf("%02d:%02d:%02d",
+			ExpiresIn: fmt.Sprintf("%02dm%02dh%02ds",
 				int(file.ExpiresIn.Hours()), int(file.ExpiresIn.Minutes())%60, int(file.ExpiresIn.Seconds())%60),
 		})
 	}

@@ -27,14 +27,12 @@ type DownloadFile struct {
 }
 
 type GetFile struct {
-	Alias    string
-	Password string
+	Alias string
 	RequestingUserInfo
 }
 
 type DeleteFile struct {
-	Alias    string
-	Password string
+	Alias string
 	RequestingUserInfo
 }
 

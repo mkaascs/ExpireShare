@@ -37,26 +37,7 @@ func TestHandler_Delete(t *testing.T) {
 
 		handler := New(mockDeleter, logger)
 		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, newDeleteRequest("abc123", "", claims))
-
-		require.Equal(t, http.StatusOK, w.Code)
-	})
-
-	t.Run("success with password", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		mockDeleter := mocks.NewMockFileDeleter(ctrl)
-		mockDeleter.EXPECT().
-			DeleteFile(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(ctx context.Context, cmd commands.DeleteFile) error {
-				require.Equal(t, "secret", cmd.Password)
-				return nil
-			})
-
-		handler := New(mockDeleter, logger)
-		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, newDeleteRequest("abc123", "secret", claims))
+		handler.ServeHTTP(w, newDeleteRequest("abc123", claims))
 
 		require.Equal(t, http.StatusOK, w.Code)
 	})
@@ -89,24 +70,9 @@ func TestHandler_Delete(t *testing.T) {
 
 		handler := New(mockDeleter, logger)
 		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, newDeleteRequest("notexist", "", claims))
+		handler.ServeHTTP(w, newDeleteRequest("not-exist", claims))
 
 		require.Equal(t, http.StatusNotFound, w.Code)
-	})
-
-	t.Run("invalid password", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		mockDeleter := mocks.NewMockFileDeleter(ctrl)
-		mockDeleter.EXPECT().DeleteFile(gomock.Any(), gomock.Any()).
-			Return(domainErrors.ErrFilePasswordInvalid)
-
-		handler := New(mockDeleter, logger)
-		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, newDeleteRequest("abc123", "wrongpass", claims))
-
-		require.Equal(t, http.StatusForbidden, w.Code)
 	})
 
 	t.Run("context canceled", func(t *testing.T) {
@@ -146,13 +112,13 @@ func TestHandler_Delete(t *testing.T) {
 
 		handler := New(mockDeleter, logger)
 		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, newDeleteRequest("abc123", "", claims))
+		handler.ServeHTTP(w, newDeleteRequest("abc123", claims))
 
 		require.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 }
 
-func newDeleteRequest(alias, password string, claims *middlewares.UserClaims) *http.Request {
+func newDeleteRequest(alias string, claims *middlewares.UserClaims) *http.Request {
 	r := httptest.NewRequest(http.MethodDelete, "/file/"+alias, nil)
 
 	routeCtx := chi.NewRouteContext()
@@ -162,10 +128,6 @@ func newDeleteRequest(alias, password string, claims *middlewares.UserClaims) *h
 	if claims != nil {
 		ctx = context.WithValue(ctx, "user_id", claims.UserID)
 		ctx = context.WithValue(ctx, "roles", claims.Roles)
-	}
-
-	if password != "" {
-		r.Header.Set("X-Resource-Password", password)
 	}
 
 	return r.WithContext(ctx)

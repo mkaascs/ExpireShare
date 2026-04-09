@@ -43,7 +43,6 @@ func New(deleter FileDeleter, log *slog.Logger) http.HandlerFunc {
 			slog.String("request_id", middleware.GetReqID(r.Context())))
 
 		alias := chi.URLParam(r, "alias")
-		password := r.Header.Get("X-Resource-Password")
 
 		claims, err := middlewares.GetUserClaims(r)
 		if err != nil {
@@ -55,8 +54,7 @@ func New(deleter FileDeleter, log *slog.Logger) http.HandlerFunc {
 		}
 
 		err = deleter.DeleteFile(r.Context(), commands.DeleteFile{
-			Alias:    alias,
-			Password: password,
+			Alias: alias,
 			RequestingUserInfo: commands.RequestingUserInfo{
 				UserID: claims.UserID,
 				Roles:  claims.Roles,

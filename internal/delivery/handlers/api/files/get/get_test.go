@@ -43,7 +43,7 @@ func TestHandler_Get(t *testing.T) {
 
 		handler := New(mockGetter, logger)
 		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, newGetRequest("abc123", "", claims))
+		handler.ServeHTTP(w, newGetRequest("abc123", claims))
 
 		require.Equal(t, http.StatusOK, w.Code)
 
@@ -81,24 +81,9 @@ func TestHandler_Get(t *testing.T) {
 
 		handler := New(mockGetter, logger)
 		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, newGetRequest("notexist", "", claims))
+		handler.ServeHTTP(w, newGetRequest("not-exist", claims))
 
 		require.Equal(t, http.StatusNotFound, w.Code)
-	})
-
-	t.Run("password required", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		mockGetter := mocks.NewMockFileGetter(ctrl)
-		mockGetter.EXPECT().GetFileByAlias(gomock.Any(), gomock.Any()).
-			Return(nil, domainErrors.ErrFilePasswordRequired)
-
-		handler := New(mockGetter, logger)
-		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, newGetRequest("protected", "", claims))
-
-		require.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
 	t.Run("context canceled", func(t *testing.T) {
@@ -111,7 +96,7 @@ func TestHandler_Get(t *testing.T) {
 
 		handler := New(mockGetter, logger)
 		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, newGetRequest("abc123", "", claims))
+		handler.ServeHTTP(w, newGetRequest("abc123", claims))
 
 		require.NotEqual(t, http.StatusInternalServerError, w.Code)
 	})
@@ -126,13 +111,13 @@ func TestHandler_Get(t *testing.T) {
 
 		handler := New(mockGetter, logger)
 		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, newGetRequest("abc123", "", claims))
+		handler.ServeHTTP(w, newGetRequest("abc123", claims))
 
 		require.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 }
 
-func newGetRequest(alias, password string, claims *middlewares.UserClaims) *http.Request {
+func newGetRequest(alias string, claims *middlewares.UserClaims) *http.Request {
 	r := httptest.NewRequest(http.MethodGet, "/file/"+alias, nil)
 
 	routeCtx := chi.NewRouteContext()
@@ -142,10 +127,6 @@ func newGetRequest(alias, password string, claims *middlewares.UserClaims) *http
 	if claims != nil {
 		ctx = context.WithValue(ctx, "user_id", claims.UserID)
 		ctx = context.WithValue(ctx, "roles", claims.Roles)
-	}
-
-	if password != "" {
-		r.Header.Set("X-Resource-Password", password)
 	}
 
 	return r.WithContext(ctx)

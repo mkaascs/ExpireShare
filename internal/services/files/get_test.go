@@ -57,34 +57,6 @@ func TestService_GetFileByAlias(t *testing.T) {
 		require.Positive(t, result.ExpiresIn)
 	})
 
-	t.Run("success with password", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		mockFileRepo := mocks.NewMockFileRepo(ctrl)
-		mockFileStorage := mocks.NewMockFile(ctrl)
-
-		mockFileRepo.EXPECT().GetFileByAlias(gomock.Any(), command.Alias).
-			Return(&entities.File{
-				Alias:        command.Alias,
-				PasswordHash: testutil.HashPassword(t, "correct-password"),
-				UserID:       command.UserID,
-				ExpiresAt:    time.Now().Add(time.Hour),
-			}, nil)
-
-		fileService := New(mockFileRepo, mockFileStorage, log, cfg)
-		result, err := fileService.GetFileByAlias(context.Background(), commands.GetFile{
-			Alias:    command.Alias,
-			Password: "correct-password",
-			RequestingUserInfo: commands.RequestingUserInfo{
-				UserID: command.UserID,
-				Roles:  command.Roles,
-			},
-		})
-		require.NoError(t, err)
-		require.NotNil(t, result)
-	})
-
 	t.Run("success admin bypasses access check", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -145,34 +117,6 @@ func TestService_GetFileByAlias(t *testing.T) {
 		result, err := fileService.GetFileByAlias(context.Background(), command)
 		require.Nil(t, result)
 		require.ErrorIs(t, err, domainErrors.ErrForbidden)
-	})
-
-	t.Run("invalid password", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		mockFileRepo := mocks.NewMockFileRepo(ctrl)
-		mockFileStorage := mocks.NewMockFile(ctrl)
-
-		mockFileRepo.EXPECT().GetFileByAlias(gomock.Any(), command.Alias).
-			Return(&entities.File{
-				Alias:        command.Alias,
-				UserID:       command.UserID,
-				PasswordHash: testutil.HashPassword(t, "correct-password"),
-			}, nil)
-
-		fileService := New(mockFileRepo, mockFileStorage, log, cfg)
-		result, err := fileService.GetFileByAlias(context.Background(), commands.GetFile{
-			Alias:    command.Alias,
-			Password: "wrong-password",
-			RequestingUserInfo: commands.RequestingUserInfo{
-				UserID: command.UserID,
-				Roles:  command.Roles,
-			},
-		})
-
-		require.Nil(t, result)
-		require.ErrorIs(t, err, domainErrors.ErrFilePasswordInvalid)
 	})
 
 	t.Run("context canceled", func(t *testing.T) {

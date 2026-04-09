@@ -6,16 +6,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (fs *Service) checkAccess(fileInfo entities.File, userID int64, roles []entities.UserRole, password string) error {
+func (fs *Service) checkAccess(fileInfo entities.File, userID int64, roles []entities.UserRole) error {
 	if hasRole(roles, entities.RoleAdmin) {
 		return nil
 	}
 
-	if err := fs.checkOwner(fileInfo, userID); err != nil {
-		return err
-	}
-
-	return fs.checkPassword(fileInfo, password)
+	return fs.checkOwner(fileInfo, userID)
 }
 
 func (fs *Service) checkUploadQuote(uploadedFilesCount int, filesize int64, roles []entities.UserRole) error {

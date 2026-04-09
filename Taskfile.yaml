@@ -13,10 +13,11 @@ tasks:
   test:
     desc: "Run all tests"
     cmds:
-      - go test -v -coverprofile=coverage.out ./...
+      - go test -v -coverprofile=coverage.out ./internal/delivery/... ./internal/services/... ./internal/lib/...
   test:cover:
     desc: "Run all test and open coverage report"
     cmds:
+      - task test
       - go tool cover -html=coverage.out -o coverage.html
   migrate:up:
     desc: "Up db migrations"

@@ -26,7 +26,7 @@ func (fs *Service) DeleteFile(ctx context.Context, command commands.DeleteFile) 
 		return fmt.Errorf("%s: %s: %w", fn, msg, err)
 	}
 
-	err = fs.checkAccess(*fileInfo, command.UserID, command.Roles, command.Password)
+	err = fs.checkAccess(*fileInfo, command.UserID, command.Roles)
 	if err != nil {
 		log.Info("access denied", sl.Error(err), slog.Int64("requesting_user_id", command.UserID), slog.String("alias", command.Alias))
 		return fmt.Errorf("%s: access denied: %w", fn, err)
