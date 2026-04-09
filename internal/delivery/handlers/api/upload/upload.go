@@ -133,14 +133,16 @@ func getRequestFromForm(cfg config.Service, r *http.Request) (Request, error) {
 	maxDownloadsStr := r.FormValue("max_downloads")
 
 	if maxDownloadsStr != "" {
-		maxDownloads, err := strconv.ParseInt(r.FormValue("max_downloads"), 10, 16)
+		parsedDownloads, err := strconv.ParseInt(r.FormValue("max_downloads"), 10, 16)
 		if err != nil {
 			return Request{}, errors.New("max_downloads must be a number")
 		}
 
-		if maxDownloads <= 0 || maxDownloads > 10000 {
+		if parsedDownloads <= 0 || parsedDownloads > 10000 {
 			return Request{}, errors.New("max_downloads must be between 1 and 10000")
 		}
+
+		maxDownloads = int16(parsedDownloads)
 
 	} else {
 		maxDownloads = cfg.MaxDownloads

@@ -29,7 +29,6 @@ func TestHandler_Upload(t *testing.T) {
 		Storage: config.Storage{
 			MaxFileSizeInBytes: 10 * 1024 * 1024,
 		},
-
 		Service: config.Service{
 			MaxDownloads: 5,
 			DefaultTtl:   2 * time.Hour,
@@ -48,19 +47,22 @@ func TestHandler_Upload(t *testing.T) {
 		defer ctrl.Finish()
 
 		mockUploader := mocks.NewMockFileUploader(ctrl)
-
 		mockUploader.EXPECT().
 			UploadFile(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, cmd commands.UploadFile) (string, error) {
 				require.Equal(t, "test.txt", cmd.Filename)
 				require.Equal(t, int64(1), cmd.RequestingUserInfo.UserID)
-				require.Equal(t, "2h0m0s", cmd.TTL.String())
+				require.Equal(t, 2*time.Hour, cmd.TTL)
+				require.Equal(t, int16(3), cmd.MaxDownloads)
 				return "abc123", nil
 			})
 
-		req := upload.Request{TTL: "2h", MaxDownloads: 5}
-		r := buildMultipartRequest(t, "test.txt", "hello world")
-		r = withContext(r, req, claims)
+		r := buildMultipartRequest(t, "test.txt", "hello world", map[string]string{
+			"ttl":           "2h",
+			"max_downloads": "3",
+		})
+
+		r = withClaims(r, claims)
 
 		handler := upload.New(mockUploader, logger, testCfg)
 		w := httptest.NewRecorder()
@@ -76,7 +78,6 @@ func TestHandler_Upload(t *testing.T) {
 		defer ctrl.Finish()
 
 		mockUploader := mocks.NewMockFileUploader(ctrl)
-
 		mockUploader.EXPECT().
 			UploadFile(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, cmd commands.UploadFile) (string, error) {
@@ -84,49 +85,52 @@ func TestHandler_Upload(t *testing.T) {
 				return "xyz789", nil
 			})
 
-		req := upload.Request{TTL: "1h", MaxDownloads: 3, Password: "secret"}
-		r := buildMultipartRequest(t, "doc.pdf", "pdf content")
-		r = withContext(r, req, claims)
+		r := buildMultipartRequest(t, "doc.pdf", "pdf content", map[string]string{
+			"ttl":           "1h",
+			"max_downloads": "3",
+			"password":      "secret",
+		})
+
+		r = withClaims(r, claims)
 
 		handler := upload.New(mockUploader, logger, testCfg)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
 
 		require.Equal(t, http.StatusCreated, w.Code)
-		resp := parseResponse(t, w)
-		require.Equal(t, "xyz789", resp.Alias)
 	})
 
-	t.Run("missing parsed request in context", func(t *testing.T) {
+	t.Run("success with defaults", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
 		mockUploader := mocks.NewMockFileUploader(ctrl)
+		mockUploader.EXPECT().
+			UploadFile(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, cmd commands.UploadFile) (string, error) {
+				require.Equal(t, testCfg.Service.DefaultTtl, cmd.TTL)
+				require.Equal(t, testCfg.Service.MaxDownloads, cmd.MaxDownloads)
+				return "def456", nil
+			})
+
+		r := buildMultipartRequest(t, "file.txt", "content", nil)
+		r = withClaims(r, claims)
+
 		handler := upload.New(mockUploader, logger, testCfg)
-
-		r := buildMultipartRequest(t, "test.txt", "data")
-		ctx := context.WithValue(r.Context(), "user_id", int64(1))
-		ctx = context.WithValue(ctx, "roles", []entities.UserRole{entities.RoleUser})
-		r = r.WithContext(ctx)
-
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
 
-		require.Equal(t, http.StatusInternalServerError, w.Code)
+		require.Equal(t, http.StatusCreated, w.Code)
 	})
 
-	t.Run("missing user claims in context", func(t *testing.T) {
+	t.Run("missing user claims", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
 		mockUploader := mocks.NewMockFileUploader(ctrl)
 		handler := upload.New(mockUploader, logger, testCfg)
 
-		req := upload.Request{TTL: "1h", MaxDownloads: 1}
-		r := buildMultipartRequest(t, "test.txt", "data")
-
-		ctx := context.WithValue(r.Context(), "request", req)
-		r = r.WithContext(ctx)
+		r := buildMultipartRequest(t, "test.txt", "data", map[string]string{"ttl": "1h"})
 
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
@@ -141,9 +145,51 @@ func TestHandler_Upload(t *testing.T) {
 		mockUploader := mocks.NewMockFileUploader(ctrl)
 		handler := upload.New(mockUploader, logger, testCfg)
 
-		req := upload.Request{TTL: "not-a-duration", MaxDownloads: 1}
-		r := buildMultipartRequest(t, "test.txt", "data")
-		r = withContext(r, req, claims)
+		r := buildMultipartRequest(t, "test.txt", "data", map[string]string{
+			"ttl": "not-a-duration",
+		})
+
+		r = withClaims(r, claims)
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, r)
+
+		require.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("invalid max_downloads not a number", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockUploader := mocks.NewMockFileUploader(ctrl)
+		handler := upload.New(mockUploader, logger, testCfg)
+
+		r := buildMultipartRequest(t, "test.txt", "data", map[string]string{
+			"ttl":           "1h",
+			"max_downloads": "not-a-number",
+		})
+
+		r = withClaims(r, claims)
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, r)
+
+		require.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("max_downloads out of range", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockUploader := mocks.NewMockFileUploader(ctrl)
+		handler := upload.New(mockUploader, logger, testCfg)
+
+		r := buildMultipartRequest(t, "test.txt", "data", map[string]string{
+			"ttl":           "1h",
+			"max_downloads": "99999",
+		})
+
+		r = withClaims(r, claims)
 
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
@@ -160,13 +206,13 @@ func TestHandler_Upload(t *testing.T) {
 
 		var buf bytes.Buffer
 		mw := multipart.NewWriter(&buf)
+		require.NoError(t, mw.WriteField("ttl", "1h"))
+		require.NoError(t, mw.WriteField("max_downloads", "5"))
 		require.NoError(t, mw.Close())
 
 		r := httptest.NewRequest(http.MethodPost, "/upload", &buf)
 		r.Header.Set("Content-Type", mw.FormDataContentType())
-
-		req := upload.Request{TTL: "1h", MaxDownloads: 1}
-		r = withContext(r, req, claims)
+		r = withClaims(r, claims)
 
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
@@ -183,9 +229,11 @@ func TestHandler_Upload(t *testing.T) {
 			UploadFile(gomock.Any(), gomock.Any()).
 			Return("", domainErrors.ErrFileSizeTooBig)
 
-		req := upload.Request{TTL: "1h", MaxDownloads: 1}
-		r := buildMultipartRequest(t, "big.bin", "lots of data")
-		r = withContext(r, req, claims)
+		r := buildMultipartRequest(t, "big.bin", "lots of data", map[string]string{
+			"ttl": "1h",
+		})
+
+		r = withClaims(r, claims)
 
 		handler := upload.New(mockUploader, logger, testCfg)
 		w := httptest.NewRecorder()
@@ -203,14 +251,12 @@ func TestHandler_Upload(t *testing.T) {
 			UploadFile(gomock.Any(), gomock.Any()).
 			Return("", context.Canceled)
 
-		req := upload.Request{TTL: "1h", MaxDownloads: 1}
-		r := buildMultipartRequest(t, "test.txt", "data")
-
-		ctx, cancel := context.WithCancel(r.Context())
+		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
+		r := buildMultipartRequest(t, "test.txt", "data", map[string]string{"ttl": "1h"})
 		r = r.WithContext(ctx)
-		r = withContext(r, req, claims)
+		r = withClaims(r, claims)
 
 		handler := upload.New(mockUploader, logger, testCfg)
 		w := httptest.NewRecorder()
@@ -226,11 +272,10 @@ func TestHandler_Upload(t *testing.T) {
 		mockUploader := mocks.NewMockFileUploader(ctrl)
 		mockUploader.EXPECT().
 			UploadFile(gomock.Any(), gomock.Any()).
-			Return("", fmt.Errorf("internal server error"))
+			Return("", fmt.Errorf("storage unavailable"))
 
-		req := upload.Request{TTL: "1h", MaxDownloads: 1}
-		r := buildMultipartRequest(t, "test.txt", "data")
-		r = withContext(r, req, claims)
+		r := buildMultipartRequest(t, "test.txt", "data", map[string]string{"ttl": "1h"})
+		r = withClaims(r, claims)
 
 		handler := upload.New(mockUploader, logger, testCfg)
 		w := httptest.NewRecorder()
@@ -240,23 +285,18 @@ func TestHandler_Upload(t *testing.T) {
 	})
 }
 
-func withContext(r *http.Request, req upload.Request, claims *middlewares.UserClaims) *http.Request {
-	ctx := r.Context()
-	ctx = context.WithValue(ctx, "request", req)
-	ctx = context.WithValue(ctx, "user_id", claims.UserID)
-	ctx = context.WithValue(ctx, "roles", claims.Roles)
-	return r.WithContext(ctx)
-}
-
-func buildMultipartRequest(t *testing.T, filename, content string) *http.Request {
+func buildMultipartRequest(t *testing.T, filename, content string, opts map[string]string) *http.Request {
 	t.Helper()
 
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
 
+	for key, val := range opts {
+		require.NoError(t, w.WriteField(key, val))
+	}
+
 	fw, err := w.CreateFormFile("file", filename)
 	require.NoError(t, err)
-
 	_, err = fw.Write([]byte(content))
 	require.NoError(t, err)
 	require.NoError(t, w.Close())
@@ -266,6 +306,13 @@ func buildMultipartRequest(t *testing.T, filename, content string) *http.Request
 
 	routeCtx := chi.NewRouteContext()
 	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, routeCtx))
+}
+
+func withClaims(r *http.Request, claims *middlewares.UserClaims) *http.Request {
+	ctx := r.Context()
+	ctx = context.WithValue(ctx, "user_id", claims.UserID)
+	ctx = context.WithValue(ctx, "roles", claims.Roles)
+	return r.WithContext(ctx)
 }
 
 func parseResponse(t *testing.T, w *httptest.ResponseRecorder) upload.Response {

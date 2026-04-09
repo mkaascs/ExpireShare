@@ -10,7 +10,6 @@ var (
 	ErrUploadLimitExceeded = errors.New("upload limit exceeded")
 
 	ErrForbidden           = errors.New("forbidden")
-	ErrUserNotFound        = errors.New("user not found")
 	ErrUserAlreadyExists   = errors.New("user already exists")
 	ErrAccessTokenExpired  = errors.New("access token expired")
 	ErrAccessTokenRevoked  = errors.New("access token revoked")

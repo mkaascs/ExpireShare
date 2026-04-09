@@ -12,7 +12,7 @@ service:
   default_ttl: 1h
   default_max_downloads: 1
   alias_length: 6
-  file_worker_delay: 5m
+  file_worker_delay: 1m
   permissions:
     max_uploaded_files_for_vip: 10
     max_uploaded_files_for_user: 1

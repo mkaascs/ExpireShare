@@ -48,7 +48,7 @@ func main() {
 
 	fn, ok := operations[cmd]
 	if !ok {
-		log.Fatalf(fmt.Sprintf("unknown command: %s", cmd))
+		log.Fatalf("unknown command: %s", cmd)
 	}
 
 	if err := fn(); err != nil && !errors.Is(err, migrate.ErrNoChange) {

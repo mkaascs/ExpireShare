@@ -76,6 +76,20 @@ func RenderFileServiceError(w http.ResponseWriter, r *http.Request, err error) b
 		return true
 	}
 
+	if errors.Is(err, domainErrors.ErrForbidden) {
+		RenderError(w, r,
+			http.StatusForbidden,
+			"forbidden")
+		return true
+	}
+
+	if errors.Is(err, domainErrors.ErrUploadLimitExceeded) {
+		RenderError(w, r,
+			http.StatusForbidden,
+			"your upload limit exceeded. delete unnecessary files to upload new")
+		return true
+	}
+
 	return false
 }
 
@@ -104,7 +118,7 @@ func RenderAuthServiceError(w http.ResponseWriter, r *http.Request, err error) b
 	if errors.Is(err, domainErrors.ErrUserAlreadyExists) {
 		RenderError(w, r,
 			http.StatusConflict,
-			"user with this login already exists")
+			"user with this login or email already exists")
 		return true
 	}
 
