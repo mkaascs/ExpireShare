@@ -2,6 +2,7 @@ package upload
 
 import (
 	"context"
+	"errors"
 	"expire-share/internal/config"
 	"expire-share/internal/delivery/middlewares"
 	"expire-share/internal/delivery/util"
@@ -13,23 +14,14 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 type Request struct {
-	MaxDownloads int16  `json:"max_downloads,omitempty" validate:"min=1" example:"5"`
-	TTL          string `json:"ttl,omitempty" example:"2h30m"`
-	Password     string `json:"password,omitempty" example:"1234"`
-}
-
-func (r *Request) SetDefault(cfg config.Service) {
-	if r.MaxDownloads == 0 {
-		r.MaxDownloads = cfg.MaxDownloads
-	}
-
-	if r.TTL == "" {
-		r.TTL = cfg.DefaultTtl.String()
-	}
+	MaxDownloads int16         `json:"max_downloads,omitempty" validate:"min=1;max=10000" example:"5"`
+	TTL          time.Duration `json:"ttl,omitempty" example:"2h30m"`
+	Password     string        `json:"password,omitempty" example:"1234"`
 }
 
 type Response struct {
@@ -60,15 +52,6 @@ func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.Handle
 			slog.String("fn", fn),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
 
-		request, ok := middlewares.GetParsedBodyRequest[Request](r)
-		if !ok {
-			log.Error("failed to parse request")
-			response.RenderError(w, r,
-				http.StatusInternalServerError,
-				"internal server error")
-			return
-		}
-
 		claims, err := middlewares.GetUserClaims(r)
 		if err != nil {
 			log.Error("failed to get user claims", sl.Error(err))
@@ -78,21 +61,21 @@ func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.Handle
 			return
 		}
 
-		parsedTtl, err := time.ParseDuration(request.TTL)
-		if err != nil {
-			log.Info("failed to parse ttl", sl.Error(err))
-			response.RenderError(w, r,
-				http.StatusBadRequest,
-				"failed to parse ttl. it must be like '1h20m30s'")
-			return
-		}
-
 		err = r.ParseMultipartForm(cfg.MaxFileSizeInBytes)
 		if err != nil {
 			log.Info("failed to parse form", sl.Error(err))
 			response.RenderError(w, r,
 				http.StatusBadRequest,
 				"failed to parse multipart/form")
+			return
+		}
+
+		request, err := getRequestFromForm(cfg.Service, r)
+		if err != nil {
+			log.Info("failed to parse form", sl.Error(err))
+			response.RenderError(w, r,
+				http.StatusBadRequest,
+				err.Error())
 			return
 		}
 
@@ -117,7 +100,7 @@ func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.Handle
 			Filename:     header.Filename,
 			Password:     request.Password,
 			MaxDownloads: request.MaxDownloads,
-			TTL:          parsedTtl,
+			TTL:          request.TTL,
 			RequestingUserInfo: commands.RequestingUserInfo{
 				UserID: claims.UserID,
 				Roles:  claims.Roles,
@@ -143,4 +126,43 @@ func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.Handle
 			Alias: alias,
 		})
 	}
+}
+
+func getRequestFromForm(cfg config.Service, r *http.Request) (Request, error) {
+	var maxDownloads int16
+	maxDownloadsStr := r.FormValue("max_downloads")
+
+	if maxDownloadsStr != "" {
+		maxDownloads, err := strconv.ParseInt(r.FormValue("max_downloads"), 10, 16)
+		if err != nil {
+			return Request{}, errors.New("max_downloads must be a number")
+		}
+
+		if maxDownloads <= 0 || maxDownloads > 10000 {
+			return Request{}, errors.New("max_downloads must be between 1 and 10000")
+		}
+
+	} else {
+		maxDownloads = cfg.MaxDownloads
+	}
+
+	var ttl time.Duration
+	ttlStr := r.FormValue("ttl")
+
+	if ttlStr != "" {
+		var err error
+		ttl, err = time.ParseDuration(ttlStr)
+		if err != nil {
+			return Request{}, errors.New("ttl must be like '1h30m'")
+		}
+
+	} else {
+		ttl = cfg.DefaultTtl
+	}
+
+	return Request{
+		MaxDownloads: maxDownloads,
+		TTL:          ttl,
+		Password:     r.FormValue("password"),
+	}, nil
 }

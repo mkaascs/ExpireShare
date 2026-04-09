@@ -20,8 +20,8 @@ import (
 	"expire-share/internal/infrastructure/storage/local"
 	"expire-share/internal/services/files"
 	"expire-share/internal/services/worker"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"log/slog"
 )
@@ -75,15 +75,14 @@ func (a *App) MustMountHandlers() {
 	a.HTTP.Router.Get("/download/{alias}", download.New(fileService, a.logger))
 
 	a.HTTP.Router.Route("/api", func(r chi.Router) {
-		r.With(myMiddleware.NewBodyParser[upload.Request](a.config.Service, a.logger),
-			myMiddleware.NewValidator[upload.Request](a.logger)).
-			Post("/upload", upload.New(fileService, a.logger, a.config))
-
-		r.Route("/file/{alias}", func(r chi.Router) {
+		r.Route("/", func(r chi.Router) {
 			r.Use(myMiddleware.NewAuth(authClient, a.logger))
+			r.Post("/upload", upload.New(fileService, a.logger, a.config))
 
-			r.Get("/", get.New(fileService, a.logger))
-			r.Delete("/", delete.New(fileService, a.logger))
+			r.Route("/file/{alias}", func(r chi.Router) {
+				r.Get("/", get.New(fileService, a.logger))
+				r.Delete("/", delete.New(fileService, a.logger))
+			})
 		})
 
 		r.Route("/auth", func(r chi.Router) {

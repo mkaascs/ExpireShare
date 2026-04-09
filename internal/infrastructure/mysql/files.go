@@ -42,7 +42,7 @@ func (fr *FileRepo) AddFileTx(ctx context.Context, tx tx.Tx, command commands.Ad
 	}
 
 	currentTime := time.Now()
-	res, err := sqlTx.ExecContext(ctx, `INSERT INTO files(file_name, alias, downloads_left, loaded_at, expired_at, password_hash, user_id) VALUES(?, ?, ?, ?, ?, ?, ?)`,
+	res, err := sqlTx.ExecContext(ctx, `INSERT INTO files(file_name, alias, downloads_left, loaded_at, expires_at, password_hash, user_id) VALUES(?, ?, ?, ?, ?, ?, ?)`,
 		command.Filename,
 		command.Alias,
 		command.MaxDownloads,
@@ -72,7 +72,7 @@ func (fr *FileRepo) GetFileByAlias(ctx context.Context, alias string) (*entities
 	const fn = "repository.mysql.FileRepo.GetFileByAlias"
 
 	var file entities.File
-	err := fr.DB.QueryRowContext(ctx, `SELECT file_name, alias, downloads_left, loaded_at, expired_at, password_hash, user_id FROM files WHERE alias = ? AND expires_at > NOW()`, alias).Scan(
+	err := fr.DB.QueryRowContext(ctx, `SELECT file_name, alias, downloads_left, loaded_at, expires_at, password_hash, user_id FROM files WHERE alias = ? AND expires_at > NOW()`, alias).Scan(
 		&file.Filename,
 		&file.Alias,
 		&file.DownloadsLeft,
