@@ -1,0 +1,42 @@
+services:
+  mysql-expire:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ExpireShare
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_expire_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - shared-network
+
+  expire-share:
+    build: .
+    ports:
+      - "6010:6010"
+    environment:
+      CONFIG_PATH: ${CONFIG_PATH}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      mysql-expire:
+        condition: service_healthy
+    volumes:
+      - ./config:/app/config:ro
+      - expire_files:/app/storage
+    networks:
+      - shared-network
+
+volumes:
+  mysql_expire_data:
+  expire_files:
+
+networks:
+  shared-network:
+    external: true
+    name: services-network

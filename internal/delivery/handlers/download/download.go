@@ -9,18 +9,20 @@ import (
 	"expire-share/internal/domain/dto/files/results"
 	"expire-share/internal/lib/log/sl"
 	"fmt"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
 	"io"
 	"log/slog"
 	"mime"
 	"net/http"
 	"path/filepath"
 	"syscall"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 )
 
 // Response represents standard API error response
-// @Description Standard error response structure
+//
+//	@Description	Standard error response structure
 type Response struct {
 	response.Response
 }
@@ -35,9 +37,9 @@ type FileDownloader interface {
 //	@Tags			file
 //	@Accept			json
 //	@Produce		application/octet-stream
-//	@Param			alias				path		string	true	"File alias"
-//	@Param			X-Resource-Password	header		string	false	"File password (required for password-protected files)"
-//	@Success		200					{file}		binary	"File content"
+//	@Param			alias				path		string				true	"File alias"
+//	@Param			X-Resource-Password	header		string				false	"File password (required for password-protected files)"
+//	@Success		200					{file}		binary				"File content"
 //	@Failure		403					{object}	response.Response	"File password required or invalid password"
 //	@Failure		404					{object}	response.Response	"File not found or has expired"
 //	@Failure		500					{object}	response.Response	"Internal server error"

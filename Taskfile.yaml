@@ -1,5 +1,9 @@
 version: "3"
 
+vars:
+  COMPOSE_CMD: docker compose
+  SERVICE_NAME: expire-share
+
 tasks:
   default:
     desc: "Commands list"
@@ -31,4 +35,20 @@ tasks:
     desc: "Generate swagger documentation"
     cmds:
       - swag fmt
-      - swag init -g cmd/expire-share/main.go -o ./docs
+      - "swag init -g cmd/{{.SERVICE_NAME}}/main.go -o ./docs"
+  docker:up:
+    desc: "Up docker container"
+    cmds:
+      - "{{.COMPOSE_CMD}} up -d --build"
+  docker:down:
+    desc: "Down docker container"
+    cmds:
+      - "{{.COMPOSE_CMD}} down"
+  docker:logs:
+    desc: "Show docker container logs"
+    cmds:
+      - "{{.COMPOSE_CMD}} logs -f {{.SERVICE_NAME}}"
+  docker:restart:
+    desc: "Restart {{.SERVICE_NAME}}"
+    cmds:
+      - "{{.COMPOSE_CMD}} restart {{.SERVICE_NAME}}"

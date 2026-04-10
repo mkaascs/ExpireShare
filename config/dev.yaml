@@ -1,0 +1,20 @@
+env: "dev" # prod, local, dev
+db_host: "mysql-expire:3306"
+storage:
+  type: "local"
+  path: "./storage/"
+  max_file_size: "500mb"
+http_server:
+  port: 6010
+  timeout: 4s
+  idle_timeout: 60s
+service:
+  default_ttl: 1h
+  default_max_downloads: 1
+  alias_length: 6
+  file_worker_delay: 5m
+  permissions:
+    max_uploaded_files_for_vip: 10
+    max_uploaded_files_for_user: 1
+auth_service:
+  addr: "auth-service:5505"
