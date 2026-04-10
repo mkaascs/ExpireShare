@@ -3,11 +3,12 @@ package config
 import (
 	"expire-share/internal/lib/sizes"
 	"fmt"
-	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/joho/godotenv"
 	"log"
 	"os"
 	"time"
+
+	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 )
 
 const (

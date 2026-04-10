@@ -9,16 +9,20 @@ import (
 	"expire-share/internal/domain/dto/files/results"
 	"expire-share/internal/lib/log/sl"
 	"fmt"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
 	"io"
 	"log/slog"
 	"mime"
 	"net/http"
 	"path/filepath"
 	"syscall"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 )
 
+// Response represents standard API error response
+//
+//	@Description	Standard error response structure
 type Response struct {
 	response.Response
 }
@@ -29,18 +33,17 @@ type FileDownloader interface {
 
 // New @Summary Download file
 //
-//	@Description	Downloads uploaded file by its alias
+//	@Description	Downloads uploaded file by its alias. If file is password-protected, provide password in X-Resource-Password header.
 //	@Tags			file
 //	@Accept			json
-//	@Produce		json
-//	@Param			request	body	Request	true	"File data"
-//	@Success		200
-//	@Failure		400	{object}	Response
-//	@Failure		401	{object}	Response
-//	@Failure		403	{object}	Response
-//	@Failure		404	{object}	Response
-//	@Failure		500	{object}	Response
-//	@Router			/download [get]
+//	@Produce		application/octet-stream
+//	@Param			alias				path		string				true	"File alias"
+//	@Param			X-Resource-Password	header		string				false	"File password (required for password-protected files)"
+//	@Success		200					{file}		binary				"File content"
+//	@Failure		403					{object}	response.Response	"File password required or invalid password"
+//	@Failure		404					{object}	response.Response	"File not found or has expired"
+//	@Failure		500					{object}	response.Response	"Internal server error"
+//	@Router			/download/{alias} [get]
 func New(downloader FileDownloader, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.download.New"

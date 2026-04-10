@@ -10,10 +10,11 @@ import (
 	"expire-share/internal/domain/interfaces/tx"
 	"expire-share/internal/lib/log/sl"
 	"fmt"
-	"github.com/go-sql-driver/mysql"
-	_ "github.com/go-sql-driver/mysql"
 	"log/slog"
 	"time"
+
+	"github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const (

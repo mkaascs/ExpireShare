@@ -6,8 +6,9 @@ import (
 	"expire-share/internal/lib/alias"
 	"expire-share/internal/lib/log/sl"
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"log/slog"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func (fs *Service) UploadFile(ctx context.Context, command commands.UploadFile) (string, error) {

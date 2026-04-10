@@ -1,9 +1,10 @@
 package testutil
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
-	"testing"
 )
 
 func HashPassword(t *testing.T, password string) string {

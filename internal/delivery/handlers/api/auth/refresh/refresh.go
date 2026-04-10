@@ -8,27 +8,50 @@ import (
 	"expire-share/internal/domain/dto/auth/commands"
 	"expire-share/internal/domain/dto/auth/results"
 	"expire-share/internal/lib/log/sl"
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/render"
 	"log/slog"
 	"net/http"
+
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/render"
 )
 
+// Request represents token refresh request body
+//
+//	@Description	Refresh token for obtaining new access token
 type Request struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
+// Response represents token refresh response
+//
+//	@Description	New access and refresh tokens
 type Response struct {
 	response.Response
 	AccessToken  string `json:"access_token,omitempty"`
 	RefreshToken string `json:"refresh_token,omitempty"`
-	ExpiresIn    int64  `json:"expires_in,omitempty"`
+
+	// Token expiration time in seconds
+	//	@example	900
+	ExpiresIn int64 `json:"expires_in,omitempty"`
 }
 
 type TokenRefresh interface {
 	Refresh(ctx context.Context, command commands.Refresh) (*results.Refresh, error)
 }
 
+// New @Summary Refresh access token
+//
+//	@Description	Get new access token using refresh token. Performs token rotation (returns new refresh token).
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		Request				true	"Refresh token"
+//	@Success		200		{object}	Response			"Token refreshed successfully"
+//	@Failure		400		{object}	response.Response	"Invalid request body"
+//	@Failure		401		{object}	response.Response	"Invalid or expired refresh token"
+//	@Failure		422		{object}	response.Response	"Validation error"
+//	@Failure		500		{object}	response.Response	"Internal server error"
+//	@Router			/api/auth/refresh [post]
 func New(refresh TokenRefresh, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.api.auth.refresh.New"

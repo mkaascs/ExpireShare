@@ -9,13 +9,14 @@ import (
 	"expire-share/internal/delivery/util/response"
 	"expire-share/internal/domain/dto/files/commands"
 	"expire-share/internal/lib/log/sl"
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/render"
 	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/render"
 )
 
 type Request struct {
@@ -24,6 +25,9 @@ type Request struct {
 	Password     string        `json:"password,omitempty" example:"1234"`
 }
 
+// Response represents file upload response
+//
+//	@Description	Response after successful file upload
 type Response struct {
 	response.Response
 	Alias string `json:"alias,omitempty"`
@@ -35,16 +39,23 @@ type FileUploader interface {
 
 // New @Summary Upload file
 //
-//	@Description	Uploads file on server
+//	@Description	Uploads file to server with optional password protection, download limit, and expiration time. Requires authentication.
 //	@Tags			file
-//	@Accept			multipart/json
+//	@Accept			multipart/form-data
 //	@Produce		json
-//	@Param			request	body		Request	true	"File data"
-//	@Success		201		{object}	Response
-//	@Failure		400		{object}	Response
-//	@Failure		422		{object}	Response
-//	@Failure		500		{object}	Response
-//	@Router			/upload [post]
+//	@Security		BearerAuth
+//	@Param			file			formData	file				true	"File to upload"
+//	@Param			max_downloads	formData	int16				false	"Maximum number of downloads (max: 10000)"
+//	@Param			ttl				formData	string				false	"Time to live (e.g., '1h', '2h30m', '7d')"
+//	@Param			password		formData	string				false	"File password (optional, required for download if set)"
+//	@Success		201				{object}	Response			"File uploaded successfully"
+//	@Failure		400				{object}	response.Response	"Invalid request"
+//	@Failure		401				{object}	response.Response	"Unauthorized"
+//	@Failure		403				{object}	response.Response	"Forbidden (upload limit exceeded)"
+//	@Failure		413				{object}	response.Response	"File too large"
+//	@Failure		422				{object}	response.Response	"Unprocessable entity"
+//	@Failure		500				{object}	response.Response	"Internal server error"
+//	@Router			/api/upload [post]
 func New(uploader FileUploader, log *slog.Logger, cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.upload.api.New"

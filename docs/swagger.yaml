@@ -1,24 +1,6 @@
 definitions:
-  download.Request:
-    properties:
-      password:
-        example: "1234"
-        type: string
-    type: object
-  download.Response:
-    properties:
-      errors:
-        items:
-          type: string
-        type: array
-    type: object
-  get.Request:
-    properties:
-      password:
-        example: "1234"
-        type: string
-    type: object
   get.Response:
+    description: Response with file info
     properties:
       downloads_left:
         type: integer
@@ -29,33 +11,116 @@ definitions:
       expires_in:
         type: string
     type: object
-  remove.Request:
+  login.Request:
+    description: Login credentials for authentication
     properties:
+      login:
+        example: user
+        minLength: 3
+        type: string
       password:
-        example: "1234"
+        example: expire123
+        minLength: 5
+        type: string
+    required:
+    - login
+    - password
+    type: object
+  login.Response:
+    description: Authentication response with tokens
+    properties:
+      access_token:
+        type: string
+      errors:
+        items:
+          type: string
+        type: array
+      expires_in:
+        description: "Token expiration time in seconds\n\t@example\t900"
+        type: integer
+      refresh_token:
         type: string
     type: object
-  remove.Response:
+  logout.Request:
+    description: Tokens to invalidate on logout
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    required:
+    - access_token
+    - refresh_token
+    type: object
+  logout.Response:
+    description: Empty response on successful logout
     properties:
       errors:
         items:
           type: string
         type: array
     type: object
-  upload.Request:
+  refresh.Request:
+    description: Refresh token for obtaining new access token
     properties:
-      max_downloads:
-        example: 5
-        minimum: 1
-        type: integer
-      password:
-        example: "1234"
+      refresh_token:
         type: string
-      ttl:
-        example: 2h30m
+    required:
+    - refresh_token
+    type: object
+  refresh.Response:
+    description: New access and refresh tokens
+    properties:
+      access_token:
+        type: string
+      errors:
+        items:
+          type: string
+        type: array
+      expires_in:
+        description: "Token expiration time in seconds\n\t@example\t900"
+        type: integer
+      refresh_token:
         type: string
     type: object
+  register.Request:
+    description: Registration data for new user account
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      login:
+        example: user
+        minLength: 3
+        type: string
+      password:
+        example: expire123
+        minLength: 5
+        type: string
+    required:
+    - email
+    - login
+    - password
+    type: object
+  register.Response:
+    description: Registration response with user ID
+    properties:
+      errors:
+        items:
+          type: string
+        type: array
+      user_id:
+        type: integer
+    type: object
+  response.Response:
+    properties:
+      errors:
+        items:
+          type: string
+        type: array
+    type: object
   upload.Response:
+    description: Response after successful file upload
     properties:
       alias:
         type: string
@@ -66,99 +131,205 @@ definitions:
     type: object
 info:
   contact: {}
-  description: A self-destructing file-sharing service with TTL and download limits
+  description: File sharing service with expiration and download limits
   title: Expire Share API
-  version: "1.0"
+  version: 1.0.0
 paths:
-  /download:
-    get:
+  /api/auth/login:
+    post:
       consumes:
       - application/json
-      description: Downloads uploaded file by its alias
+      description: Authenticate user with login and password. Returns access and refresh
+        tokens.
       parameters:
-      - description: File data
+      - description: Login credentials
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/download.Request'
+          $ref: '#/definitions/login.Request'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Login successful
+          schema:
+            $ref: '#/definitions/login.Response'
         "400":
-          description: Bad Request
+          description: Invalid request body
           schema:
-            $ref: '#/definitions/download.Response'
+            $ref: '#/definitions/response.Response'
         "401":
-          description: Unauthorized
+          description: Invalid login or password
           schema:
-            $ref: '#/definitions/download.Response'
-        "403":
-          description: Forbidden
+            $ref: '#/definitions/response.Response'
+        "422":
+          description: Validation error
           schema:
-            $ref: '#/definitions/download.Response'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/download.Response'
+            $ref: '#/definitions/response.Response'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
-            $ref: '#/definitions/download.Response'
+            $ref: '#/definitions/response.Response'
       tags:
-      - file
-  /file:
-    delete:
+      - auth
+  /api/auth/logout:
+    post:
       consumes:
       - application/json
-      description: Deletes uploaded file by its alias
+      description: Invalidate access and refresh tokens. User will need to login again
+        to obtain new tokens.
       parameters:
-      - description: File data
+      - description: Tokens to invalidate
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/remove.Request'
+          $ref: '#/definitions/logout.Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout successful
+          schema:
+            $ref: '#/definitions/logout.Response'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Invalid tokens
+          schema:
+            $ref: '#/definitions/response.Response'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      tags:
+      - auth
+  /api/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Get new access token using refresh token. Performs token rotation
+        (returns new refresh token).
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/refresh.Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token refreshed successfully
+          schema:
+            $ref: '#/definitions/refresh.Response'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            $ref: '#/definitions/response.Response'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      tags:
+      - auth
+  /api/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create new user account with login, email and password.
+      parameters:
+      - description: Registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/register.Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Registration successful
+          schema:
+            $ref: '#/definitions/register.Response'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: User with this login or email already exists
+          schema:
+            $ref: '#/definitions/response.Response'
+        "422":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      tags:
+      - auth
+  /api/file/{alias}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes uploaded file by its alias. Requires authentication and
+        file ownership.
+      parameters:
+      - description: File alias
+        in: path
+        name: alias
+        required: true
+        type: string
       produces:
       - application/json
       responses:
         "204":
-          description: No Content
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/remove.Response'
+          description: No content
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/remove.Response'
+            $ref: '#/definitions/response.Response'
         "403":
-          description: Forbidden
+          description: Forbidden (not file owner)
           schema:
-            $ref: '#/definitions/remove.Response'
+            $ref: '#/definitions/response.Response'
         "404":
-          description: Not Found
+          description: File not found
           schema:
-            $ref: '#/definitions/remove.Response'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/remove.Response'
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
       tags:
       - file
     get:
       consumes:
       - application/json
-      description: Get info about uploaded file by its alias
+      description: Get info about uploaded file by its alias. Requires authentication
+        and file ownership.
       parameters:
-      - description: File data
-        in: body
-        name: request
+      - description: File alias
+        in: path
+        name: alias
         required: true
-        schema:
-          $ref: '#/definitions/get.Request'
+        type: string
       produces:
       - application/json
       responses:
@@ -166,59 +337,117 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/get.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/get.Response'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/get.Response'
+            $ref: '#/definitions/response.Response'
         "403":
-          description: Forbidden
+          description: Forbidden (not file owner)
           schema:
-            $ref: '#/definitions/get.Response'
+            $ref: '#/definitions/response.Response'
         "404":
-          description: Not Found
+          description: File not found
           schema:
-            $ref: '#/definitions/get.Response'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/get.Response'
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
       tags:
       - file
-  /upload:
+  /api/upload:
     post:
       consumes:
-      - multipart/json
-      description: Uploads file on server
+      - multipart/form-data
+      description: Uploads file to server with optional password protection, download
+        limit, and expiration time. Requires authentication.
       parameters:
-      - description: File data
-        in: body
-        name: request
+      - description: File to upload
+        in: formData
+        name: file
         required: true
-        schema:
-          $ref: '#/definitions/upload.Request'
+        type: file
+      - description: 'Maximum number of downloads (max: 10000)'
+        format: int32
+        in: formData
+        name: max_downloads
+        type: integer
+      - description: Time to live (e.g., '1h', '2h30m', '7d')
+        in: formData
+        name: ttl
+        type: string
+      - description: File password (optional, required for download if set)
+        in: formData
+        name: password
+        type: string
       produces:
       - application/json
       responses:
         "201":
-          description: Created
+          description: File uploaded successfully
           schema:
             $ref: '#/definitions/upload.Response'
         "400":
-          description: Bad Request
+          description: Invalid request
           schema:
-            $ref: '#/definitions/upload.Response'
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+        "403":
+          description: Forbidden (upload limit exceeded)
+          schema:
+            $ref: '#/definitions/response.Response'
+        "413":
+          description: File too large
+          schema:
+            $ref: '#/definitions/response.Response'
         "422":
-          description: Unprocessable Entity
+          description: Unprocessable entity
           schema:
-            $ref: '#/definitions/upload.Response'
+            $ref: '#/definitions/response.Response'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
-            $ref: '#/definitions/upload.Response'
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      tags:
+      - file
+  /download/{alias}:
+    get:
+      consumes:
+      - application/json
+      description: Downloads uploaded file by its alias. If file is password-protected,
+        provide password in X-Resource-Password header.
+      parameters:
+      - description: File alias
+        in: path
+        name: alias
+        required: true
+        type: string
+      - description: File password (required for password-protected files)
+        in: header
+        name: X-Resource-Password
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: File content
+          schema:
+            type: file
+        "403":
+          description: File password required or invalid password
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: File not found or has expired
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
       tags:
       - file
 swagger: "2.0"

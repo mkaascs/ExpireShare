@@ -1,15 +1,15 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "A self-destructing file-sharing service with TTL and download limits",
+        "description": "File sharing service with expiration and download limits",
         "title": "Expire Share API",
         "contact": {},
-        "version": "1.0"
+        "version": "1.0.0"
     },
     "paths": {
-        "/download": {
-            "get": {
-                "description": "Downloads uploaded file by its alias",
+        "/api/auth/login": {
+            "post": {
+                "description": "Authenticate user with login and password. Returns access and refresh tokens.",
                 "consumes": [
                     "application/json"
                 ],
@@ -17,59 +17,232 @@
                     "application/json"
                 ],
                 "tags": [
-                    "file"
+                    "auth"
                 ],
                 "parameters": [
                     {
-                        "description": "File data",
+                        "description": "Login credentials",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/download.Request"
+                            "$ref": "#/definitions/login.Request"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "Login successful",
+                        "schema": {
+                            "$ref": "#/definitions/login.Response"
+                        }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request body",
                         "schema": {
-                            "$ref": "#/definitions/download.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "Invalid login or password",
                         "schema": {
-                            "$ref": "#/definitions/download.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden",
+                    "422": {
+                        "description": "Validation error",
                         "schema": {
-                            "$ref": "#/definitions/download.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/download.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/download.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
             }
         },
-        "/file": {
+        "/api/auth/logout": {
+            "post": {
+                "description": "Invalidate access and refresh tokens. User will need to login again to obtain new tokens.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "description": "Tokens to invalidate",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/logout.Request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logout successful",
+                        "schema": {
+                            "$ref": "#/definitions/logout.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid tokens",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/refresh": {
+            "post": {
+                "description": "Get new access token using refresh token. Performs token rotation (returns new refresh token).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/refresh.Request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Token refreshed successfully",
+                        "schema": {
+                            "$ref": "#/definitions/refresh.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid or expired refresh token",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/register": {
+            "post": {
+                "description": "Create new user account with login, email and password.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "description": "Registration data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/register.Request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Registration successful",
+                        "schema": {
+                            "$ref": "#/definitions/register.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "User with this login or email already exists",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/file/{alias}": {
             "get": {
-                "description": "Get info about uploaded file by its alias",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get info about uploaded file by its alias. Requires authentication and file ownership.",
                 "consumes": [
                     "application/json"
                 ],
@@ -81,13 +254,11 @@
                 ],
                 "parameters": [
                     {
-                        "description": "File data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/get.Request"
-                        }
+                        "type": "string",
+                        "description": "File alias",
+                        "name": "alias",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -97,40 +268,33 @@
                             "$ref": "#/definitions/get.Response"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/get.Response"
-                        }
-                    },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/get.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "403": {
-                        "description": "Forbidden",
+                        "description": "Forbidden (not file owner)",
                         "schema": {
-                            "$ref": "#/definitions/get.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "File not found",
                         "schema": {
-                            "$ref": "#/definitions/get.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/get.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
             },
             "delete": {
-                "description": "Deletes uploaded file by its alias",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes uploaded file by its alias. Requires authentication and file ownership.",
                 "consumes": [
                     "application/json"
                 ],
@@ -142,57 +306,48 @@
                 ],
                 "parameters": [
                     {
-                        "description": "File data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/remove.Request"
-                        }
+                        "type": "string",
+                        "description": "File alias",
+                        "name": "alias",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "204": {
-                        "description": "No Content"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/remove.Response"
-                        }
+                        "description": "No content"
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/remove.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "403": {
-                        "description": "Forbidden",
+                        "description": "Forbidden (not file owner)",
                         "schema": {
-                            "$ref": "#/definitions/remove.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "File not found",
                         "schema": {
-                            "$ref": "#/definitions/remove.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/remove.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
             }
         },
-        "/upload": {
+        "/api/upload": {
             "post": {
-                "description": "Uploads file on server",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Uploads file to server with optional password protection, download limit, and expiration time. Requires authentication.",
                 "consumes": [
-                    "multipart/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -202,38 +357,128 @@
                 ],
                 "parameters": [
                     {
-                        "description": "File data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/upload.Request"
-                        }
+                        "type": "file",
+                        "description": "File to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "Maximum number of downloads (max: 10000)",
+                        "name": "max_downloads",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Time to live (e.g., '1h', '2h30m', '7d')",
+                        "name": "ttl",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "File password (optional, required for download if set)",
+                        "name": "password",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "File uploaded successfully",
                         "schema": {
                             "$ref": "#/definitions/upload.Response"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request",
                         "schema": {
-                            "$ref": "#/definitions/upload.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden (upload limit exceeded)",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "413": {
+                        "description": "File too large",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "422": {
-                        "description": "Unprocessable Entity",
+                        "description": "Unprocessable entity",
                         "schema": {
-                            "$ref": "#/definitions/upload.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/upload.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/download/{alias}": {
+            "get": {
+                "description": "Downloads uploaded file by its alias. If file is password-protected, provide password in X-Resource-Password header.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File alias",
+                        "name": "alias",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File password (required for password-protected files)",
+                        "name": "X-Resource-Password",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File content",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "403": {
+                        "description": "File password required or invalid password",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "File not found or has expired",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -241,36 +486,8 @@
         }
     },
     "definitions": {
-        "download.Request": {
-            "type": "object",
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "example": "1234"
-                }
-            }
-        },
-        "download.Response": {
-            "type": "object",
-            "properties": {
-                "errors": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "get.Request": {
-            "type": "object",
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "example": "1234"
-                }
-            }
-        },
         "get.Response": {
+            "description": "Response with file info",
             "type": "object",
             "properties": {
                 "downloads_left": {
@@ -287,16 +504,66 @@
                 }
             }
         },
-        "remove.Request": {
+        "login.Request": {
+            "description": "Login credentials for authentication",
             "type": "object",
+            "required": [
+                "login",
+                "password"
+            ],
             "properties": {
+                "login": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "user"
+                },
                 "password": {
                     "type": "string",
-                    "example": "1234"
+                    "minLength": 5,
+                    "example": "expire123"
                 }
             }
         },
-        "remove.Response": {
+        "login.Response": {
+            "description": "Authentication response with tokens",
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "expires_in": {
+                    "description": "Token expiration time in seconds\n\t@example\t900",
+                    "type": "integer"
+                },
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "logout.Request": {
+            "description": "Tokens to invalidate on logout",
+            "type": "object",
+            "required": [
+                "access_token",
+                "refresh_token"
+            ],
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "logout.Response": {
+            "description": "Empty response on successful logout",
             "type": "object",
             "properties": {
                 "errors": {
@@ -307,25 +574,93 @@
                 }
             }
         },
-        "upload.Request": {
+        "refresh.Request": {
+            "description": "Refresh token for obtaining new access token",
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "refresh.Response": {
+            "description": "New access and refresh tokens",
             "type": "object",
             "properties": {
-                "max_downloads": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "example": 5
+                "access_token": {
+                    "type": "string"
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "expires_in": {
+                    "description": "Token expiration time in seconds\n\t@example\t900",
+                    "type": "integer"
+                },
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "register.Request": {
+            "description": "Registration data for new user account",
+            "type": "object",
+            "required": [
+                "email",
+                "login",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "login": {
+                    "type": "string",
+                    "minLength": 3,
+                    "example": "user"
                 },
                 "password": {
                     "type": "string",
-                    "example": "1234"
+                    "minLength": 5,
+                    "example": "expire123"
+                }
+            }
+        },
+        "register.Response": {
+            "description": "Registration response with user ID",
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
-                "ttl": {
-                    "type": "string",
-                    "example": "2h30m"
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.Response": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
         "upload.Response": {
+            "description": "Response after successful file upload",
             "type": "object",
             "properties": {
                 "alias": {

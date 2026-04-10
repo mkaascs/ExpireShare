@@ -8,18 +8,25 @@ import (
 	"expire-share/internal/domain/dto/auth/commands"
 	"expire-share/internal/domain/dto/auth/results"
 	"expire-share/internal/lib/log/sl"
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/render"
 	"log/slog"
 	"net/http"
+
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/render"
 )
 
+// Request represents registration request body
+//
+//	@Description	Registration data for new user account
 type Request struct {
 	Login    string `json:"login" validate:"required,min=3" example:"user"`
 	Email    string `json:"email" validate:"required,email" example:"user@example.com"`
 	Password string `json:"password" validate:"required,min=5" example:"expire123"`
 }
 
+// Response represents registration response
+//
+//	@Description	Registration response with user ID
 type Response struct {
 	response.Response
 	UserID int64 `json:"user_id,omitempty"`
@@ -29,6 +36,19 @@ type UserRegister interface {
 	Register(ctx context.Context, command commands.Register) (*results.Register, error)
 }
 
+// New @Summary User registration
+//
+//	@Description	Create new user account with login, email and password.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		Request				true	"Registration data"
+//	@Success		200		{object}	Response			"Registration successful"
+//	@Failure		400		{object}	response.Response	"Invalid request body"
+//	@Failure		409		{object}	response.Response	"User with this login or email already exists"
+//	@Failure		422		{object}	response.Response	"Validation error"
+//	@Failure		500		{object}	response.Response	"Internal server error"
+//	@Router			/api/auth/register [post]
 func New(register UserRegister, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.api.auth.register.New"

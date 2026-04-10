@@ -5,11 +5,12 @@ import (
 	"expire-share/internal/config"
 	"expire-share/internal/lib/log/sl"
 	"fmt"
-	"google.golang.org/grpc/connectivity"
-	"google.golang.org/grpc/credentials/insecure"
 	"log/slog"
 	"os"
 	"time"
+
+	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"google.golang.org/grpc"
 )

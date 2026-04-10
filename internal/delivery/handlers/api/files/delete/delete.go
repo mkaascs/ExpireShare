@@ -7,13 +7,17 @@ import (
 	"expire-share/internal/delivery/util/response"
 	"expire-share/internal/domain/dto/files/commands"
 	"expire-share/internal/lib/log/sl"
+	"log/slog"
+	"net/http"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
-	"log/slog"
-	"net/http"
 )
 
+// Response represents standard API error response
+//
+//	@Description	Standard error response structure
 type Response struct {
 	response.Response
 }
@@ -24,17 +28,17 @@ type FileDeleter interface {
 
 // New @Summary Delete file
 //
-//	@Description	Deletes uploaded file by its alias
+//	@Description	Deletes uploaded file by its alias. Requires authentication and file ownership.
 //	@Tags			file
 //	@Accept			json
 //	@Produce		json
-//	@Success		204
-//	@Failure		400	{object}	Response
-//	@Failure		401	{object}	Response
-//	@Failure		403	{object}	Response
-//	@Failure		404	{object}	Response
-//	@Failure		500	{object}	Response
-//	@Router			/file [delete]
+//	@Security		BearerAuth
+//	@Param			alias	path	string	true	"File alias"
+//	@Success		204		"No content"
+//	@Failure		401		{object}	response.Response	"Unauthorized"
+//	@Failure		403		{object}	response.Response	"Forbidden (not file owner)"
+//	@Failure		404		{object}	response.Response	"File not found"
+//	@Router			/api/file/{alias} [delete]
 func New(deleter FileDeleter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.file.api.delete.New"

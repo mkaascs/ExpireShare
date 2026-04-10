@@ -20,10 +20,11 @@ import (
 	"expire-share/internal/infrastructure/storage/local"
 	"expire-share/internal/services/files"
 	"expire-share/internal/services/worker"
+	"log/slog"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
-	"log/slog"
 )
 
 type App struct {

@@ -9,13 +9,17 @@ import (
 	"expire-share/internal/domain/dto/files/results"
 	"expire-share/internal/lib/log/sl"
 	"fmt"
+	"log/slog"
+	"net/http"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
-	"log/slog"
-	"net/http"
 )
 
+// Response represents file information response
+//
+//	@Description	Response with file info
 type Response struct {
 	response.Response
 	DownloadsLeft int16  `json:"downloads_left,omitempty"`
@@ -28,17 +32,17 @@ type FileGetter interface {
 
 // New @Summary Get file info
 //
-//	@Description	Get info about uploaded file by its alias
+//	@Description	Get info about uploaded file by its alias. Requires authentication and file ownership.
 //	@Tags			file
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	Response
-//	@Failure		400	{object}	Response
-//	@Failure		401	{object}	Response
-//	@Failure		403	{object}	Response
-//	@Failure		404	{object}	Response
-//	@Failure		500	{object}	Response
-//	@Router			/file [get]
+//	@Security		BearerAuth
+//	@Param			alias	path		string	true	"File alias"
+//	@Success		200		{object}	Response
+//	@Failure		401		{object}	response.Response	"Unauthorized"
+//	@Failure		403		{object}	response.Response	"Forbidden (not file owner)"
+//	@Failure		404		{object}	response.Response	"File not found"
+//	@Router			/api/file/{alias} [get]
 func New(getter FileGetter, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.file.api.get.New"

@@ -5,11 +5,12 @@ import (
 	"errors"
 	"expire-share/internal/config"
 	"fmt"
+	"log"
+	"os"
+
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"log"
-	"os"
 )
 
 func main() {

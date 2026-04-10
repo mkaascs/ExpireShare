@@ -7,17 +7,24 @@ import (
 	"expire-share/internal/delivery/util/response"
 	"expire-share/internal/domain/dto/auth/commands"
 	"expire-share/internal/lib/log/sl"
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/render"
 	"log/slog"
 	"net/http"
+
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/render"
 )
 
+// Request represents logout request body
+//
+//	@Description	Tokens to invalidate on logout
 type Request struct {
 	AccessToken  string `json:"access_token" validate:"required"`
 	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
+// Response represents logout response
+//
+//	@Description	Empty response on successful logout
 type Response struct {
 	response.Response
 }
@@ -26,6 +33,19 @@ type UserLogout interface {
 	Logout(ctx context.Context, command commands.Logout) error
 }
 
+// New @Summary User logout
+//
+//	@Description	Invalidate access and refresh tokens. User will need to login again to obtain new tokens.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		Request				true	"Tokens to invalidate"
+//	@Success		200		{object}	Response			"Logout successful"
+//	@Failure		400		{object}	response.Response	"Invalid request body"
+//	@Failure		401		{object}	response.Response	"Invalid tokens"
+//	@Failure		422		{object}	response.Response	"Validation error"
+//	@Failure		500		{object}	response.Response	"Internal server error"
+//	@Router			/api/auth/logout [post]
 func New(logout UserLogout, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const fn = "http.api.auth.logout.New"
