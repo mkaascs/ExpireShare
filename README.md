@@ -72,7 +72,7 @@ Password-protected files require the `X-Resource-Password` header on download an
 
 - Go 1.24+
 - Docker + Docker Compose
-- [auth-service](https://github.com/mkaascs/auth-service) running (provides JWT validation)
+- [auth-service](https://github.com/mkaascs/AuthService) running (provides JWT validation)
 - Task (optional)
 
 ### Environment variables
