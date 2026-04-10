@@ -2,8 +2,9 @@ package app
 
 import (
 	"context"
+	_ "expire-share/docs"
 	"expire-share/internal/app/auth"
-	"expire-share/internal/app/http"
+	httpApp "expire-share/internal/app/http"
 	"expire-share/internal/app/mysql"
 	"expire-share/internal/config"
 	"expire-share/internal/delivery/handlers/api/auth/login"
@@ -20,15 +21,15 @@ import (
 	"expire-share/internal/infrastructure/storage/local"
 	"expire-share/internal/services/files"
 	"expire-share/internal/services/worker"
-	"log/slog"
-
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"log/slog"
+	"net/http"
 )
 
 type App struct {
-	HTTP  *http.App
+	HTTP  *httpApp.App
 	MySql *mysql.App
 	Auth  *auth.App
 
@@ -37,14 +38,14 @@ type App struct {
 }
 
 func New(config config.Config, logger *slog.Logger) *App {
-	httpApp := http.New(logger, config.HttpServer)
+	httpServer := httpApp.New(logger, config.HttpServer)
 	authApp := auth.New(logger, config.AuthService)
 
 	mysql.MustMigrate(logger, config.DbConnectionString)
 	mysqlApp, _ := mysql.New(logger, config.DbConnectionString)
 
 	return &App{
-		HTTP:   httpApp,
+		HTTP:   httpServer,
 		MySql:  mysqlApp,
 		Auth:   authApp,
 		config: config,
@@ -68,6 +69,10 @@ func (a *App) MustMountHandlers() {
 	fileService := files.New(fileRepo, fileStorage, a.logger, a.config)
 
 	if a.config.Env == config.EnvLocal {
+		a.HTTP.Router.Get("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "docs/swagger.json")
+		})
+
 		a.HTTP.Router.Get("/swagger/*", httpSwagger.Handler(
 			httpSwagger.URL("/swagger/doc.json"),
 		))
