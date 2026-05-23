@@ -110,7 +110,7 @@ func (a *App) MustMountHandlers() {
 	}
 
 	a.HTTP.Router.Route("/api", func(r chi.Router) {
-		a.HTTP.Router.With(myMiddleware.NewRateLimiter(
+		r.With(myMiddleware.NewRateLimiter(
 			rateLimiter.NewRateLimiter(a.Redis.Client, a.config.RateLimiter.Files), a.logger)).
 			With(myMiddleware.NewTimeoutLimiter(myMiddleware.TimeoutLimiterParams{
 				ReadTimeout:  10 * time.Minute,
