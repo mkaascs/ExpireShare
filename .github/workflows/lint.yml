@@ -1,0 +1,28 @@
+name: Linter
+on:
+  push:
+    branches:
+      - master
+      - development
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      - name: Linter
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12
