@@ -102,8 +102,7 @@ func newStatRequest(claims *middlewares.UserClaims) *http.Request {
 	r := httptest.NewRequest(http.MethodGet, "/api/file/stat", nil)
 
 	if claims != nil {
-		ctx := context.WithValue(r.Context(), "user_id", claims.UserID)
-		ctx = context.WithValue(ctx, "roles", claims.Roles)
+		ctx := middlewares.WithUserClaims(r.Context(), *claims)
 		return r.WithContext(ctx)
 	}
 

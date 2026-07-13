@@ -34,8 +34,8 @@ func TestHandler_Get(t *testing.T) {
 			GetFileByAlias(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, cmd commands.GetFile) (*results.GetFile, error) {
 				require.Equal(t, "abc123", cmd.Alias)
-				require.Equal(t, int64(1), cmd.RequestingUserInfo.UserID)
-				require.Equal(t, claims.Roles, cmd.RequestingUserInfo.Roles)
+				require.Equal(t, int64(1), cmd.UserID)
+				require.Equal(t, claims.Roles, cmd.Roles)
 				return &results.GetFile{
 					DownloadsLeft: 3,
 					ExpiresIn:     2 * time.Hour,
@@ -128,8 +128,7 @@ func newGetRequest(alias string, claims *middlewares.UserClaims) *http.Request {
 	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, routeCtx)
 
 	if claims != nil {
-		ctx = context.WithValue(ctx, "user_id", claims.UserID)
-		ctx = context.WithValue(ctx, "roles", claims.Roles)
+		ctx = middlewares.WithUserClaims(ctx, *claims)
 	}
 
 	return r.WithContext(ctx)

@@ -2,6 +2,7 @@ package logout
 
 import (
 	"context"
+	"expire-share/internal/delivery/middlewares"
 	"expire-share/internal/domain/dto/auth/commands"
 	domainErrors "expire-share/internal/domain/entities/errors"
 	"expire-share/internal/mocks"
@@ -105,6 +106,6 @@ func TestHandler_Logout(t *testing.T) {
 
 func newLogoutRequest(req Request) *http.Request {
 	r := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
-	ctx := context.WithValue(r.Context(), "request", req)
+	ctx := middlewares.WithParsedBodyRequest(r.Context(), req)
 	return r.WithContext(ctx)
 }

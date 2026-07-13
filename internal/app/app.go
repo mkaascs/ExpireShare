@@ -69,8 +69,8 @@ func New(config config.Config, logger *slog.Logger) *App {
 
 func (a *App) MustMountMiddlewares() {
 	a.HTTP.Router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   a.config.CORS.AllowedOrigins,
-		AllowCredentials: a.config.CORS.AllowedCredentials,
+		AllowedOrigins:   a.config.AllowedOrigins,
+		AllowCredentials: a.config.AllowedCredentials,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{
 			"Authorization",
@@ -81,7 +81,7 @@ func (a *App) MustMountMiddlewares() {
 		},
 
 		ExposedHeaders: []string{"Link", "Content-Disposition", "Content-Length"},
-		MaxAge:         a.config.CORS.MaxAge,
+		MaxAge:         a.config.MaxAge,
 	}))
 
 	a.HTTP.Router.Use(middleware.RequestID)
@@ -111,7 +111,7 @@ func (a *App) MustMountHandlers() {
 
 	a.HTTP.Router.Route("/api", func(r chi.Router) {
 		r.With(myMiddleware.NewRateLimiter(
-			rateLimiter.NewRateLimiter(a.Redis.Client, a.config.RateLimiter.Files), a.logger)).
+			rateLimiter.NewRateLimiter(a.Redis.Client, a.config.Files), a.logger)).
 			With(myMiddleware.NewTimeoutLimiter(myMiddleware.TimeoutLimiterParams{
 				ReadTimeout:  10 * time.Minute,
 				WriteTimeout: 1 * time.Minute,
@@ -120,7 +120,7 @@ func (a *App) MustMountHandlers() {
 
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(myMiddleware.NewAdminAuth(
-				rateLimiter.NewRateLimiter(a.Redis.Client, a.config.RateLimiter.Admin),
+				rateLimiter.NewRateLimiter(a.Redis.Client, a.config.Admin),
 				a.logger))
 
 			r.Route("/users", func(r chi.Router) {

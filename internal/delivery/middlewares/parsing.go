@@ -11,9 +11,11 @@ import (
 	"github.com/go-chi/render"
 )
 
+type payloadCtxKey string
+
 const (
-	requestField = "request"
-	maxBytes     = 10 * 1024 * 1024
+	payloadField payloadCtxKey = "payload"
+	maxBytes                   = 10 * 1024 * 1024
 )
 
 type DefaultSetter interface {
@@ -61,13 +63,17 @@ func NewBodyParser[T any](cfg config.Service, log *slog.Logger) func(http.Handle
 				defaulter.SetDefault(cfg)
 			}
 
-			ctx := context.WithValue(r.Context(), requestField, request)
+			ctx := context.WithValue(r.Context(), payloadField, request)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
 func GetParsedBodyRequest[T any](r *http.Request) (T, bool) {
-	request, ok := r.Context().Value(requestField).(T)
+	request, ok := r.Context().Value(payloadField).(T)
 	return request, ok
+}
+
+func WithParsedBodyRequest[T any](ctx context.Context, request T) context.Context {
+	return context.WithValue(ctx, payloadField, request)
 }

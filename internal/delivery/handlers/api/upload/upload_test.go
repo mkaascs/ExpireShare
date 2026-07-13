@@ -51,7 +51,7 @@ func TestHandler_Upload(t *testing.T) {
 			UploadFile(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, cmd commands.UploadFile) (string, error) {
 				require.Equal(t, "test.txt", cmd.Filename)
-				require.Equal(t, int64(1), cmd.RequestingUserInfo.UserID)
+				require.Equal(t, int64(1), cmd.UserID)
 				require.Equal(t, 2*time.Hour, cmd.TTL)
 				require.Equal(t, int16(3), cmd.MaxDownloads)
 				return "abc123", nil
@@ -108,8 +108,8 @@ func TestHandler_Upload(t *testing.T) {
 		mockUploader.EXPECT().
 			UploadFile(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, cmd commands.UploadFile) (string, error) {
-				require.Equal(t, testCfg.Service.DefaultTtl, cmd.TTL)
-				require.Equal(t, testCfg.Service.MaxDownloads, cmd.MaxDownloads)
+				require.Equal(t, testCfg.DefaultTtl, cmd.TTL)
+				require.Equal(t, testCfg.MaxDownloads, cmd.MaxDownloads)
 				return "def456", nil
 			})
 
@@ -309,9 +309,7 @@ func buildMultipartRequest(t *testing.T, filename, content string, opts map[stri
 }
 
 func withClaims(r *http.Request, claims *middlewares.UserClaims) *http.Request {
-	ctx := r.Context()
-	ctx = context.WithValue(ctx, "user_id", claims.UserID)
-	ctx = context.WithValue(ctx, "roles", claims.Roles)
+	ctx := middlewares.WithUserClaims(r.Context(), *claims)
 	return r.WithContext(ctx)
 }
 

@@ -31,7 +31,7 @@ func TestHandler_Delete(t *testing.T) {
 			DeleteFile(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, cmd commands.DeleteFile) error {
 				require.Equal(t, "abc123", cmd.Alias)
-				require.Equal(t, int64(1), cmd.RequestingUserInfo.UserID)
+				require.Equal(t, int64(1), cmd.UserID)
 				return nil
 			})
 
@@ -89,8 +89,7 @@ func TestHandler_Delete(t *testing.T) {
 		routeCtx := chi.NewRouteContext()
 		routeCtx.URLParams.Add("alias", "abc123")
 		ctx = context.WithValue(ctx, chi.RouteCtxKey, routeCtx)
-		ctx = context.WithValue(ctx, "user_id", int64(1))
-		ctx = context.WithValue(ctx, "roles", []entities.UserRole{entities.RoleUser})
+		ctx = middlewares.WithUserClaims(ctx, middlewares.UserClaims{UserID: 1, Roles: []entities.UserRole{entities.RoleUser}})
 
 		r := httptest.NewRequest(http.MethodDelete, "/file/abc123", nil)
 		r = r.WithContext(ctx)
@@ -126,8 +125,7 @@ func newDeleteRequest(alias string, claims *middlewares.UserClaims) *http.Reques
 	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, routeCtx)
 
 	if claims != nil {
-		ctx = context.WithValue(ctx, "user_id", claims.UserID)
-		ctx = context.WithValue(ctx, "roles", claims.Roles)
+		ctx = middlewares.WithUserClaims(ctx, *claims)
 	}
 
 	return r.WithContext(ctx)

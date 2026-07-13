@@ -95,8 +95,8 @@ func NewAdminUserContext(log *slog.Logger) func(next http.Handler) http.Handler 
 			}
 
 			ctx := r.Context()
-			ctx = context.WithValue(ctx, userIDField, userID)
-			ctx = context.WithValue(ctx, rolesField, []entities.UserRole{entities.RoleAdmin})
+			ctx = context.WithValue(ctx, userIDKey, userID)
+			ctx = context.WithValue(ctx, rolesKey, []entities.UserRole{entities.RoleAdmin})
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

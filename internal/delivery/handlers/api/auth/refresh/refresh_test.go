@@ -3,6 +3,7 @@ package refresh
 import (
 	"context"
 	"encoding/json"
+	"expire-share/internal/delivery/middlewares"
 	"expire-share/internal/domain/dto/auth/commands"
 	"expire-share/internal/domain/dto/auth/results"
 	"expire-share/internal/domain/entities"
@@ -118,6 +119,6 @@ func TestHandler_Refresh(t *testing.T) {
 
 func newRefreshRequest(req Request) *http.Request {
 	r := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
-	ctx := context.WithValue(r.Context(), "request", req)
+	ctx := middlewares.WithParsedBodyRequest(r.Context(), req)
 	return r.WithContext(ctx)
 }

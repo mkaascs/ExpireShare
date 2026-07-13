@@ -213,8 +213,7 @@ func newGetAllRequest(claims *middlewares.UserClaims, query string) *http.Reques
 	r := httptest.NewRequest(http.MethodGet, "/api/file"+query, nil)
 
 	if claims != nil {
-		ctx := context.WithValue(r.Context(), "user_id", claims.UserID)
-		ctx = context.WithValue(ctx, "roles", claims.Roles)
+		ctx := middlewares.WithUserClaims(r.Context(), *claims)
 		return r.WithContext(ctx)
 	}
 

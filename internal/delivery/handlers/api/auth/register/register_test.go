@@ -3,6 +3,7 @@ package register
 import (
 	"context"
 	"encoding/json"
+	"expire-share/internal/delivery/middlewares"
 	"expire-share/internal/domain/dto/auth/commands"
 	"expire-share/internal/domain/dto/auth/results"
 	domainErrors "expire-share/internal/domain/entities/errors"
@@ -113,6 +114,6 @@ func TestHandler_Register(t *testing.T) {
 
 func newRegisterRequest(req Request) *http.Request {
 	r := httptest.NewRequest(http.MethodPost, "/auth/register", nil)
-	ctx := context.WithValue(r.Context(), "request", req)
+	ctx := middlewares.WithParsedBodyRequest(r.Context(), req)
 	return r.WithContext(ctx)
 }

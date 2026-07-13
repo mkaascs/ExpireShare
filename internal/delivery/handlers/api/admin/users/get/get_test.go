@@ -46,9 +46,9 @@ func TestHandler_GetUser(t *testing.T) {
 
 		var resp Response
 		require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
-		require.Equal(t, expectedUser.ID, resp.User.ID)
-		require.Equal(t, expectedUser.Email, resp.User.Email)
-		require.Equal(t, expectedUser.Login, resp.User.Login)
+		require.Equal(t, expectedUser.ID, resp.ID)
+		require.Equal(t, expectedUser.Email, resp.Email)
+		require.Equal(t, expectedUser.Login, resp.Login)
 	})
 
 	t.Run("user id is not a number", func(t *testing.T) {

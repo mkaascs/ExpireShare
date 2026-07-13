@@ -14,9 +14,11 @@ import (
 	"strings"
 )
 
+type authCtxKey string
+
 const (
-	userIDField = "user_id"
-	rolesField  = "roles"
+	userIDKey authCtxKey = "user_id"
+	rolesKey  authCtxKey = "roles"
 )
 
 type UserClaims struct {
@@ -60,21 +62,27 @@ func NewAuth(auth TokenValidator, log *slog.Logger) func(handler http.Handler) h
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), userIDField, tokenInfo.UserID)
-			ctx = context.WithValue(ctx, rolesField, tokenInfo.Roles)
+			ctx := context.WithValue(r.Context(), userIDKey, tokenInfo.UserID)
+			ctx = context.WithValue(ctx, rolesKey, tokenInfo.Roles)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
+func WithUserClaims(ctx context.Context, claims UserClaims) context.Context {
+	ctx = context.WithValue(ctx, userIDKey, claims.UserID)
+	ctx = context.WithValue(ctx, rolesKey, claims.Roles)
+	return ctx
+}
+
 func GetUserClaims(r *http.Request) (*UserClaims, error) {
-	userID, ok := r.Context().Value(userIDField).(int64)
+	userID, ok := r.Context().Value(userIDKey).(int64)
 	if !ok {
 		return nil, errors.New("failed to get user id from context")
 	}
 
-	roles, ok := r.Context().Value(rolesField).([]entities.UserRole)
+	roles, ok := r.Context().Value(rolesKey).([]entities.UserRole)
 	if !ok {
 		return nil, errors.New("failed to get user roles from context")
 	}

@@ -3,6 +3,7 @@ package login
 import (
 	"context"
 	"encoding/json"
+	"expire-share/internal/delivery/middlewares"
 	"expire-share/internal/domain/dto/auth/commands"
 	"expire-share/internal/domain/dto/auth/results"
 	"expire-share/internal/domain/entities"
@@ -120,6 +121,6 @@ func TestHandler_Login(t *testing.T) {
 
 func newLoginRequest(req Request) *http.Request {
 	r := httptest.NewRequest(http.MethodPost, "/auth/login", nil)
-	ctx := context.WithValue(r.Context(), "request", req)
+	ctx := middlewares.WithParsedBodyRequest(r.Context(), req)
 	return r.WithContext(ctx)
 }

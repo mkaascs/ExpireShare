@@ -64,14 +64,14 @@ func (fs *Service) checkPassword(fileInfo entities.File, password string) error 
 func (fs *Service) getUserLimits(roles []entities.UserRole) userLimits {
 	if hasRole(roles, entities.RoleAdmin) || hasRole(roles, entities.RoleVip) {
 		return userLimits{
-			MaxUploadedFiles: fs.cfg.Permissions.MaxUploadedFiles,
-			MaxSize:          fs.cfg.Permissions.MaxFilesSizeForVipInBytes,
+			MaxUploadedFiles: fs.cfg.MaxUploadedFiles,
+			MaxSize:          fs.cfg.MaxFilesSizeForVipInBytes,
 		}
 	}
 
 	return userLimits{
-		MaxUploadedFiles: fs.cfg.Permissions.MaxUploadedFiles,
-		MaxSize:          fs.cfg.Permissions.MaxFilesSizeForUserInBytes,
+		MaxUploadedFiles: fs.cfg.MaxUploadedFiles,
+		MaxSize:          fs.cfg.MaxFilesSizeForUserInBytes,
 	}
 }
 

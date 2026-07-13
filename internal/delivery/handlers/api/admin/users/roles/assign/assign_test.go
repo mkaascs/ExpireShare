@@ -2,6 +2,7 @@ package assign
 
 import (
 	"context"
+	"expire-share/internal/delivery/middlewares"
 	domainErrors "expire-share/internal/domain/entities/errors"
 	"expire-share/internal/mocks"
 	"fmt"
@@ -14,8 +15,6 @@ import (
 	"net/http/httptest"
 	"testing"
 )
-
-const requestField = "request"
 
 func TestHandler_AssignRole(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -126,7 +125,7 @@ func newAssignRequest(userID string, role string) *http.Request {
 	routeCtx := chi.NewRouteContext()
 	routeCtx.URLParams.Add("id", userID)
 	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, routeCtx)
-	ctx = context.WithValue(ctx, requestField, Request{Role: role})
+	ctx = middlewares.WithParsedBodyRequest(ctx, Request{Role: role})
 
 	return r.WithContext(ctx)
 }

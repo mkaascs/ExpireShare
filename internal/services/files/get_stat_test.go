@@ -21,7 +21,7 @@ func TestService_GetFilesStat(t *testing.T) {
 	cfg := config.Config{
 		Service: config.Service{
 			Permissions: config.Permissions{
-				MaxUploadedFiles:          50,
+				MaxUploadedFiles:           50,
 				MaxFilesSizeForUserInBytes: 500 * 1024 * 1024,
 				MaxFilesSizeForVipInBytes:  2 * 1024 * 1024 * 1024,
 			},
@@ -52,8 +52,8 @@ func TestService_GetFilesStat(t *testing.T) {
 		require.NotNil(t, result)
 		require.Equal(t, 3, result.Stat.Count)
 		require.Equal(t, int64(1024), result.Stat.Size)
-		require.Equal(t, cfg.Permissions.MaxUploadedFiles, result.MaxCount)
-		require.Equal(t, cfg.Permissions.MaxFilesSizeForUserInBytes, result.MaxSize)
+		require.Equal(t, cfg.MaxUploadedFiles, result.MaxCount)
+		require.Equal(t, cfg.MaxFilesSizeForUserInBytes, result.MaxSize)
 	})
 
 	t.Run("success for vip user", func(t *testing.T) {
@@ -78,8 +78,8 @@ func TestService_GetFilesStat(t *testing.T) {
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		require.Equal(t, cfg.Permissions.MaxUploadedFiles, result.MaxCount)
-		require.Equal(t, cfg.Permissions.MaxFilesSizeForVipInBytes, result.MaxSize)
+		require.Equal(t, cfg.MaxUploadedFiles, result.MaxCount)
+		require.Equal(t, cfg.MaxFilesSizeForVipInBytes, result.MaxSize)
 	})
 
 	t.Run("user not found", func(t *testing.T) {
