@@ -1,5 +1,9 @@
 # Expire Share
 
+![CI](https://github.com/mkaascs/ExpireShare/actions/workflows/ci.yml/badge.svg)
+![Lint](https://github.com/mkaascs/ExpireShare/actions/workflows/lint.yml/badge.svg)
+![Go](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)
+
 A file sharing service with expiration and download limits. Upload files with optional password protection, TTL, and a maximum number of downloads. Integrates with a separate [auth-service](https://github.com/mkaascs/AuthService) for user authentication via gRPC.
 
 ---
@@ -109,6 +113,14 @@ rate_limiter:
     window: 20m
     block_duration: 10m
 ```
+---
+
+## CI
+
+Every push and pull request runs two GitHub Actions workflows:
+
+- **CI** — `go build`, `go vet`, `go test -race` on all packages
+- **Lint** — `golangci-lint` with the project config (`.golangci.yml`)
 
 ---
 
